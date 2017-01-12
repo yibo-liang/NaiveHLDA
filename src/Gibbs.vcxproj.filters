@@ -55,5 +55,8 @@
     <Text Include="C:\Users\Devid\Desktop\corpus5.txt">
       <Filter>Source Files</Filter>
     </Text>
+    <Text Include="corpus_5000.txt">
+      <Filter>Source Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

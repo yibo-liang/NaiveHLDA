@@ -201,10 +201,10 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 
-# Visual Studio 6 build log
+# Visual Studio 15 build log
 *.plg
 
-# Visual Studio 6 workspace options file
+# Visual Studio 15 workspace options file
 *.opt
 
 # LightSwitch generated files
