@@ -102,7 +102,7 @@ int utils::parse_args(int argc, char ** argv, model * pmodel) {
 		}
 		else if (arg == "-dfile") {
 			dfile = argv[++i];
-			std::cout << "dfile:" << dfile;
+			std::cout << "dfile:" << dfile << endl;
 		}
 		else if (arg == "-model") {
 			model_name = argv[++i];

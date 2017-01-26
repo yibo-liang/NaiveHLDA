@@ -94,7 +94,6 @@ int dataset::read_wordmap(string wordmapfile, mapid2word * pid2word) {
 
 	fgets(buff, BUFF_SIZE_SHORT - 1, fin);
 	int nwords = atoi(buff);
-
 	for (int i = 0; i < nwords; i++) {
 		fgets(buff, BUFF_SIZE_SHORT - 1, fin);
 		line = buff;
@@ -156,19 +155,25 @@ int dataset::read_trndata(string dfile, string wordmapfile) {
 			M = V = 0;
 			return 1;
 		}
-
+		string grant_id = strtok.token(0);
+		string grant_type = strtok.token(1);
+		
 		// allocate new document
-		document * pdoc = new document(length);
-		//if (i == 200) {
-			//std::cout <<strtok.token(0)<< endl;
-		//}
-		for (int j = 0; j < length; j++) {
-			it = word2id.find(strtok.token(j));
+		int offset = 3;
+		document * pdoc = new document(length - offset);
+		pdoc->grant_id = grant_id;
+		pdoc->grant_type = grant_type;
+		pdoc->fund_value = stod(strtok.token(2));
+			
+		for (int wordi = offset; wordi < length; wordi++) {
+			int j = wordi - offset;
+			
+			it = word2id.find(strtok.token(wordi));
 			//cout << strtok.token(j) << " ";
 			if (it == word2id.end()) {
 				// word not found, i.e., new word
 				pdoc->words[j] = word2id.size();
-				word2id.insert(pair<string, int>(strtok.token(j), word2id.size()));
+				word2id.insert(pair<string, int>(strtok.token(wordi), word2id.size()));
 			}
 			else {
 				pdoc->words[j] = it->second;

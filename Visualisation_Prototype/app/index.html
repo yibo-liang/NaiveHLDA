@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hierarchical Topic Modelling Visuallisation</title>
+    <script src="lib/d3.js"></script>
+    <script src="js/zoom.js"></script>
+    <script src="js/core.js"></script>
+</head>
+<body style="height: 100vh; width: 100vw; overflow: hidden; padding: 0; margin: 0">
+<div id="container" style="width: 100%; height: 100%; display: block">
+
+</div>
+<script>
+    render("#container", "data/top_level_hexmap.json", "data/topic_model_hierarchical.json")
+</script>
+</body>
+</html>

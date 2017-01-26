@@ -185,8 +185,8 @@ public:
 	int samplingSH(int m, int n, model * supermodel);
 
 	vector<model*> get_submod_at_depth(int depth);
-	int save_to_json();
-
+	int save_to_json_hierarchical_distinctive_level();
+	int save_to_json_hierarchical_nested();
     // estimate LDA model using Gibbs sampling
     void estimate();
     int sampling(int m, int n);

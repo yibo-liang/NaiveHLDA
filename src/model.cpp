@@ -1096,7 +1096,7 @@ void model::estimateH(model * _model) {
 
 void model::estimateSH(model * supermodel)
 {
-	if (twords > 0) {
+	if (twords > 0 && this == supermodel) {
 		// print out top words per topic
 		dataset::read_wordmap(dir + wordmapfile, &id2word);
 	}
@@ -1195,7 +1195,8 @@ void model::estimateSH(model * supermodel)
 	//if root
 	if (supermodel == this) {
 		cout << "All Finished";
-		save_to_json();
+		save_to_json_hierarchical_distinctive_level();
+		save_to_json_hierarchical_nested();
 		ofstream treefile;
 		treefile.open("tree.txt");
 
@@ -1239,7 +1240,7 @@ vector<vector<pair<string, int>>> get_topic_words(model& m) {
 
 
 	mapid2word::iterator it;
-	vector<vector<pair<string,int>>> res;
+	vector<vector<pair<string, int>>> res;
 	for (int k = 0; k < m.K; k++) {
 		vector<pair<int, double> > words_probs;
 		pair<int, double> word_prob;
@@ -1299,7 +1300,7 @@ double cosine_similarity(model* m1, int ma, model* m2, int mb, int* root_ndsum) 
 	return result;
 }
 
-int model::save_to_json()
+int model::save_to_json_hierarchical_distinctive_level()
 {
 	//ONLY USED BY ROOT TOPIC MODEL OBJECT
 
@@ -1322,9 +1323,11 @@ int model::save_to_json()
 		json topics;
 		json topicsSimilarities;
 
+		json topicClassesDistrib;
+
 		json metadata;
 		metadata["nDocs"] = M;
-		metadata["docClasses"] = {};
+		metadata["docClasses"] = { "EU","UK" };
 		metadata["nTopics"] = ntopics;
 
 		int temp_i = 0;
@@ -1333,7 +1336,7 @@ int model::save_to_json()
 			//collect word frequency(weight) for each topic at this depth level
 			model* m = models_at_d[lk];
 			//vector<vector<pair<int, double>>> topics_words = get_topic_words(*m);
-			
+
 			vector<vector<pair<string, int>>> word_freqs = get_topic_words(*m);
 			for (int i = 0; i < word_freqs.size(); i++) { //for each topics in model m
 				//vector<pair<int, double>> topic_words = topics_words[i];
@@ -1386,28 +1389,112 @@ int model::save_to_json()
 
 
 		json topicDocDistribution;
+
+		double weight_sum_all = 0;
+		double value_sum_all = 0;
+
 		for (int k = 0; k < models_at_d.size(); k++) {
 			model* mod = models_at_d[k];
 			for (int i = 0; i < mod->K; i++) {
 				int rk = i + mod->K*k;
 
+				//for topic doc 
 				json topic_doc_dist;
+
+
+				//for topic classes (EU/UK)
+				json class_eu;
+				json class_uk;
+
+				class_eu["classID"] = "EU";
+				class_uk["classID"] = "UK";
+
+				double weight_sum_uk = 0;
+				double weight_sum_eu = 0;
+
+				double weight_value_sum_norm_uk = 0;
+				double weight_value_sum_norm_eu = 0;
+
+				double weight_value_sum_uk = 0;
+				double weight_value_sum_eu = 0;
+
+				double weight_sum_norm_uk = 0;
+				double weight_sum_norm_eu = 0;
+
+
+				double avr_weight = 0;
+				for (int m = 0; m < M; m++) {
+					double tweight;
+					if (mod->nd[m][i] == 0) {
+						tweight = 0;
+					}
+					else {
+						tweight = (double)mod->nd[m][i] / (double)mod->ndsum[m];
+					}
+					avr_weight += tweight / (double)M;
+				}
 
 				for (int m = 0; m < M; m++) {
 					string topic_id = to_string(m);
-					double tweight = mod->theta[m][i];
+					double tweight;
+					if (mod->nd[m][i] == 0) {
+						tweight = 0;
+					}
+					else {
+						tweight = (double)mod->nd[m][i] / (double)mod->ndsum[m]; //mod->theta[m][i];
+						//cout << "word n in doc " << m << " is " << mod->ndsum[m]<<endl;
+					}
 					json tmp;
+
+					if (mod->ptrndata->docs[m]->grant_type != "UK") {
+						weight_sum_eu += tweight;
+						double val = mod->ptrndata->docs[m]->fund_value;
+						weight_value_sum_eu += tweight*val;
+
+					}
+					else {
+						weight_sum_uk += tweight;
+						double val = mod->ptrndata->docs[m]->fund_value;
+						weight_value_sum_uk += tweight* val;
+					}
+
+
+					if (tweight < avr_weight) continue;
 					tmp["topicWeight"] = tweight;
 					tmp["docId"] = to_string(m);
 					topic_doc_dist.push_back(tmp);
 				}
-				
+
+				class_eu["weightSum"] = weight_sum_eu;
+				class_eu["weightedValueSum"] = weight_value_sum_eu;
+				class_uk["weightSum"] = weight_sum_uk;
+				class_uk["weightedValueSum"] = weight_value_sum_uk;
+
+
+				weight_sum_all += (weight_sum_eu + weight_sum_uk);
+				value_sum_all += (weight_value_sum_eu + weight_value_sum_uk);
+
+
+				topicClassesDistrib[to_string(rk)] = { class_eu, class_uk };
 				topicDocDistribution[to_string(rk)] = topic_doc_dist;
 			}
 		}
-		merge_topic_model["topicsDocsDistrib"] = topicDocDistribution;
 
-		std::ofstream file("K" + to_string(models_at_d.size()) + "_d" + to_string(l) + ".json");
+		for (int k = 0; k < models_at_d.size(); k++) {
+			model* mod = models_at_d[k];
+			for (int i = 0; i < mod->K; i++) {
+				int rk = i + mod->K*k;
+				topicClassesDistrib[to_string(rk)][0]["weightSumNorm"] = topicClassesDistrib[to_string(rk)][0]["weightSum"] / weight_sum_all;
+				topicClassesDistrib[to_string(rk)][1]["weightSumNorm"] = topicClassesDistrib[to_string(rk)][1]["weightSum"] / weight_sum_all;
+
+				topicClassesDistrib[to_string(rk)][0]["weightedValueSumNorm"] = topicClassesDistrib[to_string(rk)][0]["weightedValueSum"] / value_sum_all;
+				topicClassesDistrib[to_string(rk)][1]["weightedValueSumNorm"] = topicClassesDistrib[to_string(rk)][1]["weightedValueSum"] / value_sum_all;
+			}
+		}
+		merge_topic_model["topicsDocsDistrib"] = topicDocDistribution;
+		merge_topic_model["topicsClassesDistrib"] = topicClassesDistrib;
+
+		std::ofstream file(dir + "K" + to_string(models_at_d.size()) + "_d" + to_string(l) + ".json");
 		string dump = merge_topic_model.dump();
 		file << dump;
 		file.close();
@@ -1428,8 +1515,8 @@ int model::save_to_json()
 					model* mod2 = models_at_d2[m2];
 					for (int k2 = 0; k2 < mod2->K; k2++) {
 						double sim = cosine_similarity(mod1, k1, mod2, k2, this->ndsum);
-						string rk1 =to_string( k1 + m1*mod1->K);
-						string rk2 =to_string( k2 + m2*mod2->K);
+						string rk1 = to_string(k1 + m1*mod1->K);
+						string rk2 = to_string(k2 + m2*mod2->K);
 						sim_ds[rk1][rk2] = sim;
 					}
 
@@ -1438,7 +1525,7 @@ int model::save_to_json()
 			}
 
 		}
-		std::ofstream file("compare_" + to_string(d) + "_" + to_string(d2) + ".json");
+		std::ofstream file(dir + "compare_" + to_string(d) + "_" + to_string(d2) + ".json");
 		string dump = sim_ds.dump();
 		file << dump;
 		file.close();
@@ -1446,6 +1533,182 @@ int model::save_to_json()
 	//topic doc distribution
 
 
+	return 0;
+}
+
+using json = nlohmann::json;
+
+json _save_to_json_hierarchical_nested(model * mod, model* top_mod) {
+	json model;
+
+	json topics;
+	json topicsSimilarities;
+	json topicClassesDistrib;
+	json metadata;
+	json topicDocDistribution;
+
+	{ //turning single model/submodel to json file
+		metadata["nDocs"] = mod->M;
+		metadata["nTopics"] = mod->K;
+		metadata["nWordsPerTopic"] = mod->twords;
+		metadata["docClasses"] = { "EU", "UK" };
+		metadata["subTopicNumber"] = mod->submodel_n;
+
+
+		vector<vector<pair<string, int>>> word_freqs = get_topic_words(*mod);
+		for (int i = 0; i < word_freqs.size(); i++) {
+			vector<pair<string, int>> word_freq = word_freqs[i];
+			json topic_word_list;
+			for (int w = 0; w < word_freq.size(); w++) {
+
+				json ins = { { "label", word_freq[w].first },{ "weight", word_freq[w].second } };
+				topic_word_list.push_back(ins);
+			}
+
+			string tmp = std::to_string(i);
+			topics[tmp] = (topic_word_list);
+		}
+
+		//similarity matrix
+		for (int k1 = 0; k1 < mod->K; k1++) {
+			for (int k2 = 0; k2 < mod->K; k2++) {
+				double sim = cosine_similarity(mod, k1, mod, k2, top_mod->ndsum);
+				string sma = std::to_string(k1);
+				string smb = std::to_string(k2);
+				topicsSimilarities[sma][smb] = sim;
+			}
+		}
+
+
+
+
+		vector<double> weight_sum_eu_vec;
+		vector<double> weight_sum_uk_vec;
+
+		vector<double> value_sum_eu_vec;
+		vector<double> value_sum_uk_vec;
+
+
+		double weight_sum_all = 0;
+		double value_sum_all = 0;
+
+		for (int i = 0; i < mod->K; i++) {
+
+			//for topic doc 
+			json topic_doc_dist;
+
+
+			//for topic classes (EU/UK)
+			json class_eu;
+			json class_uk;
+
+			class_eu["classID"] = "EU";
+			class_uk["classID"] = "UK";
+
+			double weight_sum_uk = 0;
+			double weight_sum_eu = 0;
+
+			double weight_value_sum_uk = 0;
+			double weight_value_sum_eu = 0;
+
+			double avr_weight = 0;
+			for (int m = 0; m < mod->M; m++) {
+				double tweight;
+				if (mod->nd[m][i] == 0) {
+					tweight = 0;
+				}
+				else {
+					tweight = (double)mod->nd[m][i] / (double)mod->ndsum[m];
+				}
+				avr_weight += tweight / (double)mod->M;
+			}
+
+			for (int m = 0; m < mod->M; m++) {
+				string topic_id = to_string(m);
+				double tweight = (double)mod->nd[m][i] / (double)top_mod->ndsum[m]; //mod->theta[m][i];
+				json tmp;
+
+				if (mod->ptrndata->docs[m]->grant_type != "UK") {
+					weight_sum_eu += tweight;
+					double val = mod->ptrndata->docs[m]->fund_value;
+					weight_value_sum_eu += tweight*val;
+
+				}
+				else {
+					weight_sum_uk += tweight;
+					double val = mod->ptrndata->docs[m]->fund_value;
+					weight_value_sum_uk += tweight* val;
+				}
+
+
+				if (tweight < avr_weight) continue;
+				tmp["topicWeight"] = tweight;
+				tmp["docId"] = to_string(m);
+				topic_doc_dist.push_back(tmp);
+			}
+
+			class_eu["weightSum"] = weight_sum_eu;
+			class_eu["weightedValueSum"] = weight_value_sum_eu;
+			class_uk["weightSum"] = weight_sum_uk;
+			class_uk["weightedValueSum"] = weight_value_sum_uk;
+
+
+			weight_sum_eu_vec.push_back(weight_sum_eu);
+			weight_sum_uk_vec.push_back(weight_sum_uk);
+
+			value_sum_eu_vec.push_back(weight_value_sum_eu);
+			value_sum_uk_vec.push_back(weight_value_sum_uk);
+
+
+			weight_sum_all += (weight_sum_eu + weight_sum_uk);
+			value_sum_all += (weight_value_sum_eu + weight_value_sum_uk);
+
+
+			topicClassesDistrib[to_string(i)] = { class_eu, class_uk };
+			topicDocDistribution[to_string(i)] = topic_doc_dist;
+		}
+
+		cout << "-----------------------" << endl;
+		for (int k = 0; k < mod->K; k++) {
+			topicClassesDistrib[to_string(k)][0]["weightSumNorm"] = weight_sum_eu_vec[k] / weight_sum_all;
+			topicClassesDistrib[to_string(k)][1]["weightSumNorm"] = weight_sum_uk_vec[k] / weight_sum_all;
+
+			cout << value_sum_eu_vec[k] << "/ " << value_sum_all << "=" << value_sum_eu_vec[k] / value_sum_all <<endl;
+
+			topicClassesDistrib[to_string(k)][0]["weightedValueSumNorm"] = value_sum_eu_vec[k] / value_sum_all;
+			topicClassesDistrib[to_string(k)][1]["weightedValueSumNorm"] = value_sum_uk_vec[k] / value_sum_all;
+		}
+
+
+		metadata["weightSumAll"] = weight_sum_all;
+		metadata["valueSumAll"] = value_sum_all;
+
+	}
+
+
+	json submodels;
+	for (int i = 0; i < mod->submodel_n; i++) {
+		json submodel = _save_to_json_hierarchical_nested(mod->submodels[i], top_mod);
+		submodels.push_back(submodel);
+	}
+	model["metadata"] = metadata;
+	model["topicsSimilarities"] = topicsSimilarities;
+	model["topicsDocsDistrib"] = topicDocDistribution;
+	model["topicClassesDistrib"] = topicClassesDistrib;
+	model["topics"] = topics;
+	model["submodels"] = submodels;
+
+	return model;
+}
+
+int model::save_to_json_hierarchical_nested()
+{
+
+	json all_mod = _save_to_json_hierarchical_nested(this, this);
+	std::ofstream file(dir + "topic_model_hierarchical.json");
+	string dump = all_mod.dump();
+	file << dump;
+	file.close();
 	return 0;
 }
 
@@ -1675,6 +1938,10 @@ int model::init_est_sh(model * supermodel)
 	this->hDepth = supermodel->hDepth;
 	this->Kn = supermodel->Kn;
 	this->niters = supermodel->niters;
+	this->id2word = supermodel->id2word;
+
+	this->dir = supermodel->dir;
+
 	// + read training data
 	if (supermodel == this) {
 		init_est();
