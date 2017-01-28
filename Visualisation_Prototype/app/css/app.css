@@ -1,0 +1,19 @@
+/*g {*/
+    /*transition: all 0.5s ease;*/
+    /*-webkit-transition: all 0.5s ease;*/
+    /*-moz-transition: all 0.5s ease;*/
+    /*-o-transition: all 0.5s ease;*/
+/*}*/
+
+polygon.scale-1 {
+    -ms-transform: scale(1, 1); /* IE 9 */
+    -webkit-transform: scale(1, 1); /* Safari */
+    transform: scale(1, 1); /* Standard syntax */
+    transform: translate(0,3);
+}
+
+polygon.scale-3 {
+    -ms-transform: scale(0.3333333333, 0.3333333333); /* IE 9 */
+    -webkit-transform: scale(0.3333333333, 0.3333333333); /* Safari */
+    transform: scale(0.3333333333, 0.3333333333); /* Standard syntax */
+}

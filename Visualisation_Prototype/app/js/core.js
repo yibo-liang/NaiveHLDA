@@ -3,11 +3,6 @@
  */
 
 
-var svgheight = 500;
-var svgwidth = 800;
-
-var hexmap_data = [];
-
 var render_info = {
     hexmap_data: null,
     topic_data: null,
@@ -17,10 +12,10 @@ var render_info = {
     svgwidth: window.innerWidth
     || document.documentElement.clientWidth
     || document.body.clientWidth,
-    hexagon_scale: 120,
+    hexagon_scale: 80,
     zoom_scale: 1,
     zoom_power: 1,
-    min_hex_r: 120,
+    min_hex_r: 80,
     view: {
 
         drag_pos: {
@@ -43,8 +38,8 @@ var hexagon_points = function (centre_x, centre_y, r) {
     var points = "";
     for (var i = 0; i < 6; i++) {
         var rs = i / 6;
-        var x = centre_x + Math.cos(Math.PI * 2 * rs + Math.PI / 6) * r * render_info.zoom_scale;
-        var y = centre_y + Math.sin(Math.PI * 2 * rs + Math.PI / 6) * r * render_info.zoom_scale;
+        var x = centre_x + Math.cos(Math.PI * 2 * rs + Math.PI / 6) * r;
+        var y = centre_y + Math.sin(Math.PI * 2 * rs + Math.PI / 6) * r;
         points += x + "," + y;
         if (i < 5) {
             points += " ";
@@ -56,6 +51,7 @@ var hexagon_points = function (centre_x, centre_y, r) {
 
 
 var to_render_coordinate = function (hexmap_data) {
+
     var offsetx = render_info.svgwidth / 2;
     var offsety = render_info.svgheight / 2;
 
@@ -71,13 +67,16 @@ var to_render_coordinate = function (hexmap_data) {
             topicId: (hexmap_data[i].topicId),
             words: (hexmap_data[i].words),
             distances: (hexmap_data[i].distances),
-            hexAggloCoord: copy(hexmap_data[i].hexAggloCoord),
             clusterAgglomerative: (hexmap_data[i].clusterAgglomerative),
         };
+        var coor= hexmap_data[i].hexAggloCoord;
         d.submodels = hexmap_data[i].submodels;
-        d.x = (d.hexAggloCoord.x * render_info.hexagon_scale + render_info.view.x) * render_info.zoom_scale + offsetx;
-        d.y = (d.hexAggloCoord.y * render_info.hexagon_scale + render_info.view.y) * render_info.zoom_scale + offsety;
-        delete d.hexAggloCoord;
+        d.x = (coor.x * render_info.hexagon_scale) //* render_info.zoom_scale;
+        d.y = (coor.y * render_info.hexagon_scale) //* render_info.zoom_scale;
+        d.stage_x = (coor.x * render_info.hexagon_scale + render_info.view.x) * render_info.zoom_scale + offsetx;
+        d.stage_y = (coor.y * render_info.hexagon_scale + render_info.view.y) * render_info.zoom_scale + offsety;
+
+        //delete d.hexAggloCoord;
         // console.log(d.x, d.y)
         res.push(d);
     }
@@ -89,14 +88,15 @@ function filter_invisible_data(hexmap_data, hex_r) {
 
     var res = [];
 
-    var o = render_info.zoom_scale * 2 * 80;
+    var o = render_info.zoom_scale * 2 * render_info.min_hex_r;
+    //var o=-30;
     //console.log(hex_r * render_info.zoom_scale, render_info.min_hex_r)
     if (hex_r * render_info.zoom_scale < render_info.min_hex_r) return res;
 
     for (var i = 0; i < hexmap_data.length; i++) {
         var d = hexmap_data[i];
-        var x = d.x;
-        var y = d.y;
+        var x = d.stage_x;
+        var y = d.stage_y;
 
 
         if (x > -o && y > -o && x < (render_info.svgwidth + o) && y < (render_info.svgheight + o)) {
@@ -110,35 +110,36 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
     //console.log(sub_topic_data, "DEPTH", depth)
     if (!sub_topic_data) return;
     if (depth >= 5) return;
-    var base_r = Math.pow(1 / 3, depth - 1);
-    var hex_r = base_r * (Math.sqrt(3) / 3) * render_info.zoom_scale;
     var sub_hex_r = Math.pow(1 / 3, depth);
     //console.log("cx cy ", cx, cy);
     function render_hex(d, i) {
-        var k = d3.select(this).select("polygon.hex-" + depth);
-        var k2 = k;
-        if (transition) {
-            k2 = k.transition().ease(d3.easeLinear)
-                .delay(300);
-        } else {
 
-        }
-        //.transition()
-        //.ease(d3.easeLinear)
-        k2.style("opacity", 1)
+
+        d3.select(this)
+            .style("transform", function () {
+                return "translate(" + d.x + "px," + d.y + "px) "
+                    + "scale(" + 1 / 3 + "," + 1 / 3 + ")";
+            })
+        var k = d3.select(this).select("polygon.hex-" + depth);
+        k
             .attr("points", function (d, i) {
                 //console.log("dxdy", d.x, d.y)
-                return hexagon_points(d.x, d.y, sub_hex_r * render_info.hexagon_scale)
+                return hexagon_points(0, 0, 1 * render_info.hexagon_scale)
             })
-            .style("fill", "rgba(0,0,0,0)")
+            .style("fill", "rgba(99,99,99,0.5)")
             .style("stroke", "black")
             .style("stroke-width", 1)
-            .style("opacity", function () {
-                if (sub_hex_r * render_info.hexagon_scale * render_info.zoom_scale >= 3 * render_info.min_hex_r) {
-                    return 0.3;
-                }
-                return 1
+            .each(function (d) {
+                d3.select(this)
+                    .transition(500)
+                    .style("opacity", function () {
+                        if (sub_hex_r * render_info.hexagon_scale * render_info.zoom_scale >= 3 * render_info.min_hex_r) {
+                            return 0.025;
+                        }
+                        return 1
+                    })
             })
+
         ;
         //console.log("render next", sub_topic_data)
         if (sub_topic_data.model && sub_topic_data.model.submodels.length > 0)
@@ -148,15 +149,21 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
     var hex_coordinates = [];
     for (var i = 0; i < 6; i++) {
         var a = (i + 0) / 6 * Math.PI * 2;
+        var x = Math.cos(a) * render_info.hexagon_scale / Math.sqrt(3);
+        var y = Math.sin(a) * render_info.hexagon_scale / Math.sqrt(3);
         hex_coordinates.push({
-            x: Math.cos(a) * hex_r * render_info.hexagon_scale + super_hex.datum().x,
-            y: Math.sin(a) * hex_r * render_info.hexagon_scale + super_hex.datum().y,
+            x: x,
+            y: y,
+            stage_x: super_hex.datum().stage_x + x * render_info.zoom_scale,
+            stage_y: super_hex.datum().stage_y + y * render_info.zoom_scale,
             id: super_hex.datum().topicId + "-" + i
         })
     }
     hex_coordinates.push({
-        x: super_hex.datum().x,
-        y: super_hex.datum().y,
+        x: 0,
+        y: 0,
+        stage_x: 0,
+        stage_y: 0,
         id: super_hex.datum().topicId + "-" + 6
     })
     //console.log(hex_coordinates)
@@ -179,11 +186,10 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
     g2.each(render_hex)
         .style("opacity", "0")
         .transition()
-        .delay(300)
         .style("opacity", "1");
 
     hexagons.exit()
-        .transition(100)
+        .transition(500)
         .style("opacity", 0)
         .remove()
 
@@ -197,6 +203,8 @@ function render_hexmap_toplevel(svg, data, transition) {
     }
     var hexmap_data = to_render_coordinate(render_info.hexmap_data["hexmapData"]);
     hexmap_data = filter_invisible_data(hexmap_data, 1 * render_info.hexagon_scale);
+
+
     var polygons = svg.selectAll("g.hex-0")
         .data(hexmap_data, function (d) {
             return d.topicId;
@@ -204,30 +212,30 @@ function render_hexmap_toplevel(svg, data, transition) {
 
     function render_hex(d, i) {
         var k = d3.select(this).select("polygon.hex-0");
-        var k2 = k;
-        if (transition) {
-            k2 = k.transition().ease(d3.easeLinear)
-                .delay(300);
-        } else {
-
-        }
-        //.transition()
-        //.ease(d3.easeLinear)
-        k2.style("opacity", 1)
-            .attr("points", function (d) {
-                return hexagon_points(d.x, d.y, 1 * render_info.hexagon_scale)
+        d3.select(this)
+            .style("transform", function () {
+                return "translate(" + d.x + "px," + d.y + "px) "
             })
-            .style("fill", "rgba(255,255,255,0.2)")
+
+        var k2 = k;
+        k2
+            .attr("points", function (d) {
+                return hexagon_points(0, 0, 1 * render_info.hexagon_scale)
+            })
+            .style("fill", "rgba(99,99,99,0.5)")
             .style("stroke", "black")
             .style("stroke-width", 1)
-            .style("opacity", function () {
-                if (1 * render_info.hexagon_scale * render_info.zoom_scale >= 3 * render_info.min_hex_r) {
-                    return 0;
-                }
-                return 1
+            .each(function (d) {
+                d3.select(this)
+                    .transition(500)
+                    .style("opacity", function () {
+                        if (1 * render_info.hexagon_scale * render_info.zoom_scale >= 3 * render_info.min_hex_r) {
+                            return 0.025;
+                        }
+                        return 1
+                    })
             })
-        //.log(k)
-        //console.log("render top , then nex", i)
+
 
         render_hex_map_sublevel(d3.select(this), k, render_info.hexmap_data["hexmapData"][i], 1, transition)
 
@@ -236,6 +244,7 @@ function render_hexmap_toplevel(svg, data, transition) {
     var g = polygons.enter()
         .append("g")
         .attr("class", "hex-0")
+
 
     g.append("polygon")
         .attr("class", "hex-0")
@@ -265,12 +274,42 @@ function data_prepare(svg) {
 }
 
 
+function drag_graph(super_group, transition) {
+    var offsetx = render_info.svgwidth / 2;
+    var offsety = render_info.svgheight / 2;
+
+    if (transition) {
+        super_group
+            .transition(500)
+            .ease(d3.easeLinear)
+            .style("transform", "translate("
+                + (render_info.view.x * render_info.zoom_scale + offsetx)
+                + "px,"
+                + (render_info.view.y * render_info.zoom_scale + offsety)
+                + "px)"
+                + " scale(" + render_info.zoom_scale + "," + render_info.zoom_scale + ")");
+    } else {
+        super_group
+            .style("transform", "translate("
+                + (render_info.view.x * render_info.zoom_scale + offsetx)
+                + "px,"
+                + (render_info.view.y * render_info.zoom_scale + offsety)
+                + "px)"
+                + " scale(" + render_info.zoom_scale + "," + render_info.zoom_scale + ")");
+
+    }
+}
+
 function render(container_id, hex_data_url, topic_data_url) {
     var svg = d3.select(container_id).append("svg");
     svg.style("height", "100%")
         .style("width", "100%")
         .attr("id", "hex_svg");
     //svg dragging
+
+    var super_group = svg.append("g").attr("class", "super_group")
+    drag_graph(super_group);
+
     svg
         .on("mousedown", function () {
             render_info.view.dragging = true;
@@ -292,33 +331,36 @@ function render(container_id, hex_data_url, topic_data_url) {
 
                 var dx = pos[0] - render_info.view.drag_start_pos.x;
                 var dy = pos[1] - render_info.view.drag_start_pos.y;
-                //console.log(render_info.view);
+                //console.log("mousemove", dy, dx);
                 var scale = render_info.zoom_scale;
                 render_info.view.x = render_info.view.drag_pos.x + dx / scale;
                 render_info.view.y = render_info.view.drag_pos.y + dy / scale;
 
-                render_hexmap_toplevel(svg);
+                drag_graph(super_group);
+                render_hexmap_toplevel(super_group)
             }
         })
+
 
     bind_mousewheel("hex_svg", function (delta) {
         render_info.zoom_power = Math.max(delta * 0.25 + render_info.zoom_power, 1);
         render_info.zoom_scale = Math.pow(2, render_info.zoom_power - 1)
         //console.log(delta, render_info.zoom_scale)
-        render_hexmap_toplevel(svg, null, true);
+        render_hexmap_toplevel(super_group, null, true);
+        drag_graph(super_group, true);
     })
 
 
     d3.json(hex_data_url, function (data) {
         console.log("hex data loaded")
-        render_hexmap_toplevel(svg, data)
-        data_prepare(svg);
+        render_hexmap_toplevel(super_group, data)
+        data_prepare(super_group);
     })
 
     d3.json(topic_data_url, function (data) {
         console.log("topic model data loaded")
         render_info.topic_data = data;
-        data_prepare(svg);
+        data_prepare(super_group);
     })
 }
 
