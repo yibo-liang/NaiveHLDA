@@ -15,6 +15,8 @@ var render_info = {
     hexagon_scale: 80,
     zoom_scale: 1,
     zoom_power: 1,
+    zoom_base: Math.sqrt(3),
+    zoom_ease: d3.easeLinear,
     min_hex_r: 80,
     view: {
 
@@ -30,8 +32,30 @@ var render_info = {
         x: 0,
         y: 0
     }
+}
+
+function center_to(dx, dy) {
+    var super_group = d3.select("g.super_group");
+    render_info.view.x = -dx;
+    render_info.view.y = -dy;
+    drag_graph(super_group, true);
+}
+
+function zoom_to_depth(depth, dx, dy) {
+    var super_group = d3.select("g.super_group")
+    render_info.zoom_power = (depth + 1) * 2;
 
 
+    render_info.zoom_power = Math.min(Math.max(render_info.zoom_power, 1), 7);
+
+    render_info.zoom_scale = Math.pow(render_info.zoom_base, render_info.zoom_power - 1)
+    console.log(render_info.view.x, render_info.view.y, "---")
+    render_info.view.x = -dx;
+    render_info.view.y = -dy;
+    console.log(dx, dy)
+    console.log(render_info.zoom_scale, render_info.zoom_power)
+    render_hexmap_toplevel(super_group, null, true);
+    drag_graph(super_group, true);
 }
 
 var hexagon_points = function (centre_x, centre_y, r) {
@@ -69,13 +93,14 @@ var to_render_coordinate = function (hexmap_data) {
             distances: (hexmap_data[i].distances),
             clusterAgglomerative: (hexmap_data[i].clusterAgglomerative),
         };
-        var coor= hexmap_data[i].hexAggloCoord;
+        var coor = hexmap_data[i].hexAggloCoord;
         d.submodels = hexmap_data[i].submodels;
         d.x = (coor.x * render_info.hexagon_scale) //* render_info.zoom_scale;
         d.y = (coor.y * render_info.hexagon_scale) //* render_info.zoom_scale;
         d.stage_x = (coor.x * render_info.hexagon_scale + render_info.view.x) * render_info.zoom_scale + offsetx;
         d.stage_y = (coor.y * render_info.hexagon_scale + render_info.view.y) * render_info.zoom_scale + offsety;
-
+        d.absolute_x = d.x;
+        d.absolute_y = d.y;
         //delete d.hexAggloCoord;
         // console.log(d.x, d.y)
         res.push(d);
@@ -120,6 +145,8 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
                 return "translate(" + d.x + "px," + d.y + "px) "
                     + "scale(" + 1 / 3 + "," + 1 / 3 + ")";
             })
+
+
         var k = d3.select(this).select("polygon.hex-" + depth);
         k
             .attr("points", function (d, i) {
@@ -139,6 +166,10 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
                         return 1
                     })
             })
+            .on("dblclick", function (d) {
+                console.log("click dpth = " + depth);
+                zoom_to_depth(depth + 1, d.absolute_x, d.absolute_y);
+            })
 
         ;
         //console.log("render next", sub_topic_data)
@@ -156,6 +187,8 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
             y: y,
             stage_x: super_hex.datum().stage_x + x * render_info.zoom_scale,
             stage_y: super_hex.datum().stage_y + y * render_info.zoom_scale,
+            absolute_x: super_hex.datum().absolute_x + x * Math.pow(1 / 3, depth - 1),
+            absolute_y: super_hex.datum().absolute_y + y * Math.pow(1 / 3, depth - 1),
             id: super_hex.datum().topicId + "-" + i
         })
     }
@@ -164,6 +197,8 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
         y: 0,
         stage_x: 0,
         stage_y: 0,
+        absolute_x: super_hex.datum().absolute_x,
+        absolute_y: super_hex.datum().absolute_y,
         id: super_hex.datum().topicId + "-" + 6
     })
     //console.log(hex_coordinates)
@@ -235,6 +270,14 @@ function render_hexmap_toplevel(svg, data, transition) {
                         return 1
                     })
             })
+            .on("dblclick", function (d) {
+                console.log("click dpth = " + 0);
+                if (render_info.zoom_power < 2) {
+                    zoom_to_depth(0, d.absolute_x, d.absolute_y);
+                } else {
+                    zoom_to_depth(1, d.absolute_x, d.absolute_y);
+                }
+            })
 
 
         render_hex_map_sublevel(d3.select(this), k, render_info.hexmap_data["hexmapData"][i], 1, transition)
@@ -252,9 +295,9 @@ function render_hexmap_toplevel(svg, data, transition) {
     g.each(render_hex);
 
     polygons.exit()
-        .each(function () {
-            d3.select(this).remove();
-        })
+        .transition()
+        .style("opacity", 0)
+        .remove();
 
     polygons.each(render_hex)
 
@@ -280,8 +323,9 @@ function drag_graph(super_group, transition) {
 
     if (transition) {
         super_group
-            .transition(500)
-            .ease(d3.easeLinear)
+            .transition()
+            .duration(500)
+            .ease(render_info.zoom_ease)
             .style("transform", "translate("
                 + (render_info.view.x * render_info.zoom_scale + offsetx)
                 + "px,"
@@ -343,9 +387,10 @@ function render(container_id, hex_data_url, topic_data_url) {
 
 
     bind_mousewheel("hex_svg", function (delta) {
-        render_info.zoom_power = Math.max(delta * 0.25 + render_info.zoom_power, 1);
-        render_info.zoom_scale = Math.pow(2, render_info.zoom_power - 1)
-        //console.log(delta, render_info.zoom_scale)
+
+        render_info.zoom_power = Math.min(Math.max(delta * 1 + render_info.zoom_power, 1), 7);
+        render_info.zoom_scale = Math.pow(render_info.zoom_base, render_info.zoom_power - 1)
+        console.log(delta, render_info.zoom_scale, render_info.zoom_power)
         render_hexmap_toplevel(super_group, null, true);
         drag_graph(super_group, true);
     })

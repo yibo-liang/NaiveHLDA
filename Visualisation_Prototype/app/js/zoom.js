@@ -28,6 +28,19 @@ function bind_mousewheel(dom_id, MouseWheelHandler){
     else dom.attachEvent("onmousewheel", dummy);
 }
 
+stringToColour = function(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    var colour = '#';
+    for (var i = 0; i < 3; i++) {
+        var value = (hash >> (i * 8)) & 0xFF;
+        colour += ('00' + value.toString(16)).substr(-2);
+    }
+    return colour;
+}
+
 RGBtoHSV= function(color) {
     var r,g,b,h,s,v;
     r= color[0];
