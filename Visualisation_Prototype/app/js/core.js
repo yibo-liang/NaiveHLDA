@@ -205,10 +205,10 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
         group_self.append("polygon")
             .attr("class", "hex-" + depth)
             .attr("points", function (d) {
-                return hexagon_points(0, 0, 1 * render_info.hexagon_scale - 1 / sub_hex_r)
+                return hexagon_points(0, 0, 1 * render_info.hexagon_scale)
             })
             .style("fill", "rgba(255,255,255,1.0)")
-            .style("stroke", "rgba(100,100,100,0.3)")
+            .style("stroke", "rgba(230,230,230,0.75)")
             .style("stroke-width", 1)
 
             .on("dblclick", function (d) {
@@ -246,10 +246,11 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
     function render_hex(d, i) {
 
 
+        var shrink = (render_info.min_hex_r - 0.5) / render_info.min_hex_r;
         d3.select(this)
             .style("transform", function () {
                 return "translate(" + d.x + "px," + d.y + "px) "
-                    + "scale(" + 1 / 3 + "," + 1 / 3 + ")";
+                    + "scale(" + 1 / 3 * shrink + "," + 1 / 3 * shrink + ")";
             })
 
 
@@ -344,14 +345,15 @@ function render_hexmap_toplevel(svg, data, transition) {
         });
 
     function draw_boarders(group_self, borders) {
-       // console.log(borders)
+        console.log("borders", borders)
         group_self.selectAll("path")
             .data(borders)
             .enter()
             .append("path")
             .attr("d", function (datum, i) {
                 var rotate = datum - 1;
-                var r = 1 * render_info.hexagon_scale - 1;
+                console.log("rotate", rotate)
+                var r = 1 * render_info.hexagon_scale;
                 var rs1 = ((rotate - 1) ) / 6;
                 var x1 = 0 + Math.cos(Math.PI * 2 * rs1 + Math.PI / 6) * r;
                 var y1 = 0 + Math.sin(Math.PI * 2 * rs1 + Math.PI / 6) * r;
@@ -364,19 +366,23 @@ function render_hexmap_toplevel(svg, data, transition) {
             .attr("stroke", "rgba(155,155,188,0.8)")
             .attr("stroke-width", "3")
             .attr("stroke-linecap", "round")
+            .style("z-index", 999)
     }
 
     function enter_hex(d, i) {
+        var shrink = (render_info.min_hex_r - 1.5) / render_info.min_hex_r;
         d3.select(this)
             .style("transform", function () {
                 return "translate(" + d.x + "px," + d.y + "px) "
+                +"scale(" + shrink + "," + shrink + ")"
+
             })
 
         var group_self = d3.select(this)
-            .append("g")
-            .attr("class", "group-0-self");
+                .append("g")
+                .attr("class", "group-0-self")
+            ;
 
-        draw_boarders(group_self, d.borders);
 
         group_self.append("polygon")
             .attr("class", "hex-0")
@@ -384,7 +390,7 @@ function render_hexmap_toplevel(svg, data, transition) {
                 return hexagon_points(0, 0, 1 * render_info.hexagon_scale - 1)
             })
             .style("fill", "rgba(255,255,255,1.0)")
-            .style("stroke", "rgba(100,100,100,0.1)")
+            .style("stroke", "rgba(100,100,100,0.05)")
             .style("stroke-width", 1)
 
         //console.log(d)
@@ -434,14 +440,13 @@ function render_hexmap_toplevel(svg, data, transition) {
         var k = d3.select(this).select("polygon.hex-0");
 
         var hide_func = function () {
-            console.log("hidefund")
             if (1 * render_info.hexagon_scale * (render_info.zoom_scale) > 3 * render_info.min_hex_r) {
                 return 0.025;
             }
             return 1
         }
 
-        d3.select(this).select("group-0-self")
+        d3.select(this).select("g.group-0-self")
             .selectAll("text")
             .transition(500)
             .style("opacity", hide_func)
@@ -469,6 +474,20 @@ function render_hexmap_toplevel(svg, data, transition) {
         .remove();
 
     polygons.each(render_hex)
+
+
+    var border_group = polygons.enter()
+        .append("g")
+        .attr("class", "top-level-border")
+        .style("transform", function (d) {
+            return "translate(" + d.absolute_x + "px," + d.absolute_y + "px)"
+        })
+
+    border_group.each(function (d, i) {
+        console.log(d.borders)
+        draw_boarders(d3.select(this), d.borders);
+    })
+
 
 }
 
