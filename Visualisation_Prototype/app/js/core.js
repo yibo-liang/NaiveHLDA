@@ -19,6 +19,7 @@ d3.rebind = function (target, source) {
 
 
 var render_info = {
+
     hexmap_data: null,
     topic_data: null,
     svgheight: window.innerHeight
@@ -46,6 +47,11 @@ var render_info = {
         dragging: false,
         x: 0,
         y: 0
+    },
+    colors: {
+        background: "rgba(255,255,255,1)",
+        border: "rgba(155,155,200, 0.3)",
+        cluster_border: "rgba(155,155,188,0.8)"
     }
 }
 
@@ -144,8 +150,10 @@ var to_render_coordinate = function (hexmap_data) {
         };
         var coor = hexmap_data[i].hexAggloCoord;
         //console.log(hexmap_data[i])
+
         d.borders = hexmap_data[i].borders;
-        d.submodels = hexmap_data[i].submodels
+        //console.log("hex ,", i, hexmap_data[i]);
+        d.model = hexmap_data[i].model
         d.x = (coor.x * render_info.hexagon_scale) //* render_info.zoom_scale;
         d.y = (coor.y * render_info.hexagon_scale) //* render_info.zoom_scale;
         d.stage_x = (coor.x * render_info.hexagon_scale + render_info.view.x) * render_info.zoom_scale + offsetx;
@@ -153,6 +161,7 @@ var to_render_coordinate = function (hexmap_data) {
         d.absolute_x = d.x;
         d.absolute_y = d.y;
         d.neighbours = hexmap_data[i].neighbours;
+        d.topicClassesDistrib = hexmap_data[i].topicClassesDistrib;
         //delete d.hexAggloCoord;
         // console.log(d.x, d.y)
         res.push(d);
@@ -165,7 +174,7 @@ function filter_invisible_data(hexmap_data, hex_r) {
 
     var res = [];
 
-    var o = render_info.zoom_scale * 2 * render_info.min_hex_r;
+    var o = render_info.zoom_scale * 4 * hex_r;
     //var o=-30;
     //console.log(hex_r * render_info.zoom_scale, render_info.min_hex_r)
     if (hex_r * render_info.zoom_scale < render_info.min_hex_r) return res;
@@ -183,13 +192,76 @@ function filter_invisible_data(hexmap_data, hex_r) {
     return res;
 }
 
+function get_value_range(model) {
+
+    var get_sum = function (d) {
+        var res;
+        if (d.topicClassesDistrib)
+            res = d.topicClassesDistrib[0].weightedValueSum + d.topicClassesDistrib[1].weightedValueSum;
+        else {
+            res = d[0].weightedValueSum + d[1].weightedValueSum;
+        }
+        //console.log("res", res)
+        return res;
+    }
+    var arr = []
+
+    for (key in model) {
+        arr.push(get_sum(model[key]));
+    }
+
+    //console.log("getsum", arr)
+    return {
+        min: Math.min.apply(Math, arr),
+        max: Math.max.apply(Math, arr),
+    }
+}
+
+function draw_pie_in_group(group, pie_data, sibling_models) {
+    // require [{name: eu, val: num, proj: num},...]
+    var colors = {EU: "#5B5EA6", UK: "#D65076"};
+
+    var sum = pie_data[0].weightedValueSum + pie_data[1].weightedValueSum;
+
+    var pie = d3.pie()
+        .value(function (d) {
+            return d.weightSum;
+        })(pie_data)
+    var range = get_value_range(sibling_models);
+
+    var min_radius_percentage = 1 / 5;
+
+    var radius = render_info.hexagon_scale * Math.sqrt(3) / 2;
+    //console.log(radius, range)
+    radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
+
+    //console.log("r2", radius)
+
+    var arc = d3.arc()
+        .outerRadius(radius)
+        .innerRadius(0)
+
+    var pie_g = group.selectAll(".arc")
+        .data(pie)
+        .enter()
+
+    pie_g.insert("path", ":first-child")
+        .attr("class", "arc")
+        .attr("d", arc)
+        .style("fill", function (d, i) {
+            return colors[d.data.classID];
+        })
+        .style("opacity", "0.5")
+}
+
 function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition) {
 
     if (typeof sub_topic_data == "undefined") return;
+    if (!super_hex) return;
     if (depth >= 5) return;
     var sub_hex_r = Math.pow(1 / 3, depth);
     //console.log("cx cy ", cx, cy);
-
+    // console.log("render sub model," ,sub_topic_data);
 
     function enter_hex(d, i) {
         d3.select(this)
@@ -207,37 +279,64 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
             .attr("points", function (d) {
                 return hexagon_points(0, 0, 1 * render_info.hexagon_scale)
             })
-            .style("fill", "rgba(255,255,255,1.0)")
-            .style("stroke", "rgba(230,230,230,0.75)")
+            .style("fill", render_info.colors.background)
+            .style("stroke", render_info.colors.border)
             .style("stroke-width", 1)
+            .style("opacity", 0)
+            .transition()
+            .style("opacity", 1)
 
-            .on("dblclick", function (d) {
+        var pie_group = group_self.append("g")
+            .attr("class", "pie")
+
+        var text_group = group_self.append("g")
+            .attr("class", "texts")
+
+
+        var model = sub_topic_data.model ? sub_topic_data.model : sub_topic_data;
+        // console.log("-- s m --", sub_topic_data, model,  model["topics"],  model["topics"][(d.topicId)], d.topicId)
+        var visible_texts = model["topics"][i]
+            .sort(function (a, b) {
+                return b.weight - a.weight;
+            })
+            .slice(0, 3)
+
+        var cc = clickcancel();
+        group_self.call(cc);
+        cc
+            .on("dblclick", function () {
                 console.log("click dpth = " + depth);
                 zoom_to_depth(depth + 1, d.absolute_x, d.absolute_y);
+            })
+            .on("click", function () {
+                console.log("su r", d, "subd", sub_topic_data)
+
             })
 
 
         //console.log("sub_topic_data", sub_topic_data, sub_topic_data.model);
-        var model = sub_topic_data.model || sub_topic_data;
-        var visible_texts = model.topics[i]
-            .sort(function (a, b) {
-                return a.weight - b.weight;
-            })
-            .slice(0, 3)
-        group_self.selectAll("text")
+
+
+        text_group.selectAll("text")
             .data(visible_texts)
             .enter()
             .append("text")
             .text(function (d) {
-                return d.label;
+                return d.label + "," + d.weight;
             })
             .style("transform", function (d, i) {
                 var new_i;
-                var font_size = 16;
-                if (i == 0) new_i = 1;
-                if (i == 1) new_i = 0;
+                var font_size = 24;
+                if (i == 0) new_i = 0;
+                if (i == 1) new_i = 1;
                 if (i == 2) new_i = -1;
                 return "translate(" + 0 + "," + (new_i) * font_size + "px)"
+            })
+            .style("font-size", function (d, i) {
+                return i == 0 ? "18" : "14";
+            })
+            .style("font-weight", function (d, i) {
+                return i == 0 ? "600" : "400";
             })
             .style("text-anchor", "middle")
     }
@@ -254,30 +353,42 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
             })
 
 
-        var hide_func = function () {
-            if (1 * render_info.hexagon_scale * (render_info.zoom_scale) > 3 * render_info.min_hex_r) {
-                return 0.025;
+        var fade_hide = function (selection) {
+            var hide_func = function () {
+                //console.log("su r",sub_hex_r * render_info.hexagon_scale * (render_info.zoom_scale))
+                if (sub_hex_r * render_info.hexagon_scale * (render_info.zoom_scale) > 3 * render_info.min_hex_r) {
+                    return 0;
+                }
+                return 1
+
             }
-            return 1
+            selection
+                .transition()
+                .duration(500)
+                .style("opacity", hide_func)
+
         }
 
-        var group_self = d3.select(this).select("group-" + depth + "-self");
-        group_self
-            .selectAll("text")
-            .transition(500)
-            .style("opacity", hide_func)
-
-
-        group_self
-            .selectAll("text")
-            .transition(500)
-            .style("opacity", hide_func)
+        var group_self = d3.select(this).select("g.group-" + depth + "-self");
+        //console.log("gs",i ,group_self, depth, d3.select(this).select("g").attr("class"))
+        fade_hide(group_self.selectAll("polygon"))
+        fade_hide(d3.select(this).select(".texts"))
+        fade_hide(d3.select(this).select("g.pie"))
 
 
         var sub_hexs = d3.select(this).select("polygon.hex-" + depth);
         //console.log("render next", sub_topic_data)
-        if (sub_topic_data.model && sub_topic_data.model.submodels.length > 0)
+        var model = sub_topic_data.model ? sub_topic_data.model : sub_topic_data;
+        if (model)
+
+            draw_pie_in_group(d3.select(this).select("g.pie"), model.topicClassesDistrib[i], model.topicClassesDistrib);
+
+
+        if (sub_topic_data.model && sub_topic_data.model.submodels.length > 0) {
             render_hex_map_sublevel(d3.select(this), sub_hexs, sub_topic_data.model.submodels[i], depth + 1, transition);
+
+
+        }
     }
 
     var hex_coordinates = [];
@@ -317,12 +428,14 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
     var group_enter = hexagons.enter()
         .append("g")
         .attr("class", "grouop-" + depth)
+        .style("opacity", 0)
         .each(enter_hex)
 
-    group_enter.each(render_hex)
+    group_enter
         .style("opacity", "0")
         .transition()
-        .style("opacity", "1");
+        .style("opacity", "1")
+        .each(render_hex);
 
     hexagons.exit()
         .transition(500)
@@ -345,14 +458,13 @@ function render_hexmap_toplevel(svg, data, transition) {
         });
 
     function draw_boarders(group_self, borders) {
-        console.log("borders", borders)
+        //console.log("borders", borders)
         group_self.selectAll("path")
             .data(borders)
             .enter()
             .append("path")
             .attr("d", function (datum, i) {
                 var rotate = datum - 1;
-                console.log("rotate", rotate)
                 var r = 1 * render_info.hexagon_scale;
                 var rs1 = ((rotate - 1) ) / 6;
                 var x1 = 0 + Math.cos(Math.PI * 2 * rs1 + Math.PI / 6) * r;
@@ -363,7 +475,7 @@ function render_hexmap_toplevel(svg, data, transition) {
                 return "M" + x1 + " " + y1 + " L" + x2 + " " + y2;
 
             })
-            .attr("stroke", "rgba(155,155,188,0.8)")
+            .attr("stroke", render_info.colors.cluster_border)
             .attr("stroke-width", "3")
             .attr("stroke-linecap", "round")
             .style("z-index", 999)
@@ -374,7 +486,7 @@ function render_hexmap_toplevel(svg, data, transition) {
         d3.select(this)
             .style("transform", function () {
                 return "translate(" + d.x + "px," + d.y + "px) "
-                +"scale(" + shrink + "," + shrink + ")"
+                    + "scale(" + shrink + "," + shrink + ")"
 
             })
 
@@ -383,37 +495,48 @@ function render_hexmap_toplevel(svg, data, transition) {
                 .attr("class", "group-0-self")
             ;
 
-
         group_self.append("polygon")
             .attr("class", "hex-0")
             .attr("points", function (d) {
                 return hexagon_points(0, 0, 1 * render_info.hexagon_scale - 1)
             })
-            .style("fill", "rgba(255,255,255,1.0)")
-            .style("stroke", "rgba(100,100,100,0.05)")
+            .style("fill", render_info.colors.background)
+            .style("stroke", render_info.colors.border)
             .style("stroke-width", 1)
+
+        var pie_group = group_self.append("g")
+            .attr("class", "pie")
+
+        var text_group = group_self.append("g")
+            .attr("class", "texts")
 
         //console.log(d)
         var visible_texts = d.words
             .sort(function (a, b) {
-                return a.weight - b.weight;
+                return b.weight - a.weight;
             })
             .slice(0, 3)
 
-        group_self.selectAll("text")
+        text_group.selectAll("text")
             .data(visible_texts)
             .enter()
             .append("text")
             .text(function (d) {
-                return d.label;
+                return d.label + "," + d.weight;
             })
             .style("transform", function (d, i) {
                 var new_i;
-                var font_size = 16;
-                if (i == 0) new_i = 1;
-                if (i == 1) new_i = 0;
+                var font_size = 22;
+                if (i == 0) new_i = 0;
+                if (i == 1) new_i = 1;
                 if (i == 2) new_i = -1;
                 return "translate(" + 0 + "," + (new_i) * font_size + "px)"
+            })
+            .style("font-size", function (d, i) {
+                return i == 0 ? "18" : "14";
+            })
+            .style("font-weight", function (d, i) {
+                return i == 0 ? "600" : "400";
             })
             .style("text-anchor", "middle")
 
@@ -440,31 +563,47 @@ function render_hexmap_toplevel(svg, data, transition) {
         var k = d3.select(this).select("polygon.hex-0");
 
         var hide_func = function () {
+            //onsole.log("top su r", 1 * render_info.hexagon_scale * (render_info.zoom_scale))
             if (1 * render_info.hexagon_scale * (render_info.zoom_scale) > 3 * render_info.min_hex_r) {
                 return 0.025;
             }
             return 1
         }
 
-        d3.select(this).select("g.group-0-self")
-            .selectAll("text")
-            .transition(500)
-            .style("opacity", hide_func)
+        var group_self = d3.select(this).select("g.group-0-self");
 
-        k.each(function (d) {
-            d3.select(this)
-                .transition(500)
+        if (d.topicClassesDistrib)
+            draw_pie_in_group(d3.select(this).select("g.pie"), d.topicClassesDistrib, render_info.hexmap_data["hexmapData"]);
+
+        var fade_hide = function (selection) {
+            var hide_func = function () {
+                //console.log("su r",sub_hex_r * render_info.hexagon_scale * (render_info.zoom_scale))
+                if (1 * render_info.hexagon_scale * (render_info.zoom_scale) > 3 * render_info.min_hex_r) {
+                    return 0;
+                }
+                return 1
+
+            }
+            selection
+                .transition()
+                .duration(500)
                 .style("opacity", hide_func)
-        })
+                .style("visibility", function () {
+                    return hide_func() == 0 ? "hidden" : "visible";
+                })
+        }
 
+        //console.log("gs",i ,group_self, depth, d3.select(this).select("g").attr("class"))
+        fade_hide(group_self.selectAll("polygon"))
+        fade_hide(d3.select(this).select(".texts"))
+        fade_hide(d3.select(this).select("g.pie"))
 
-        render_hex_map_sublevel(d3.select(this), k, render_info.hexmap_data["hexmapData"][i], 1, transition)
+        render_hex_map_sublevel(d3.select(this), k, d, 1, transition)
     }
 
     var group_enter = polygons.enter()
         .append("g")
         .attr("class", "group-0")
-
 
     group_enter.each(enter_hex);
 
@@ -484,7 +623,7 @@ function render_hexmap_toplevel(svg, data, transition) {
         })
 
     border_group.each(function (d, i) {
-        console.log(d.borders)
+        // console.log(d.borders)
         draw_boarders(d3.select(this), d.borders);
     })
 
@@ -559,15 +698,19 @@ function data_prepare(svg) {
     if (!render_info.hexmap_data || !render_info.topic_data) return;
 
     for (var i = 0; i < render_info.hexmap_data["hexmapData"].length; i++) {
-        var d = render_info.topic_data["submodels"][i];
+        var topic_i = render_info.hexmap_data["hexmapData"][i].topicId;
+        var d = render_info.topic_data["submodels"][parseInt(topic_i)];
+        var c = render_info.topic_data["topicClassesDistrib"][parseInt(topic_i)];
         //console.log(d)
+        //console.log("d p,",i, parseInt(topic_i))
         render_info.hexmap_data["hexmapData"][i].model = d;
+        render_info.hexmap_data["hexmapData"][i].topicClassesDistrib = c;
     }
-    console.log("data prepared", render_info.hexmap_data)
+    console.log("data prepared", render_info.hexmap_data, render_info.topic_data)
 
     render_hexmap_toplevel(svg);
 
-    console.log(render_info.hexmap_data)
+    // console.log(render_info.hexmap_data)
 }
 
 
@@ -622,7 +765,7 @@ function render(container_id, hex_data_url, topic_data_url) {
         })
         .on("mouseup", function () {
             render_info.view.dragging = false;
-            console.log("mouseup")
+            // console.log("mouseup")
         })
         .on("mousemove", function () {
             if (render_info.view.dragging) {
@@ -647,7 +790,7 @@ function render(container_id, hex_data_url, topic_data_url) {
         render_info.zoom_scale = Math.pow(render_info.zoom_base, render_info.zoom_power - 1 + 0.0001)
 
         render_info.zoom_scale = Math.min(Math.max(render_info.zoom_scale, 1), 27);
-        console.log(delta, render_info.zoom_scale, render_info.zoom_power)
+        //console.log(delta, render_info.zoom_scale, render_info.zoom_power)
         render_hexmap_toplevel(super_group, null, true);
         drag_graph(super_group, true);
     })

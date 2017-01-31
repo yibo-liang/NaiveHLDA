@@ -1618,9 +1618,9 @@ json _save_to_json_hierarchical_nested(model * mod, model* top_mod) {
 					tweight = 0;
 				}
 				else {
-					tweight = (double)mod->nd[m][i] / (double)mod->ndsum[m];
+					tweight = (double)mod->nd[m][i] / (double)top_mod->ndsum[m];
 				}
-				avr_weight += tweight / (double)mod->M;
+				avr_weight += tweight / (double)top_mod->M;
 			}
 
 			for (int m = 0; m < mod->M; m++) {
