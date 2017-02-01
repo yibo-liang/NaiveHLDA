@@ -6,14 +6,20 @@
     <link rel="stylesheet" type="text/css" href="css/app.css">
     <script src="lib/d3.js"></script>
     <script src="js/zoom.js"></script>
-    <script src="js/core.js"></script>
+    <script src="js/core_new.js"></script>
 </head>
 <body style="height: 100vh; width: 100vw; overflow: hidden; padding: 0; margin: 0">
 <div id="container" style="width: 100%; height: 100%; display: block">
 
 </div>
 <script>
-    render("#container", "data/top_level_hexmap.json", "data/topic_model_hierarchical.json")
+    //render("#container", "data/top_level_hexmap.json", "data/simple_hierarchical_topic_model.json")
+    var hexmap=new hierarchical_hexmap("#container");
+    hexmap.init()
+        .load_hexmap_data("data/top_level_hexmap.json")
+        .load_topic_model("data/simple_hierarchical_topic_model.json")
+
+
 </script>
 </body>
 </html>

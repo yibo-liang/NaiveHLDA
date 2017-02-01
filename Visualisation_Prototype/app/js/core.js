@@ -357,7 +357,7 @@ function render_hex_map_sublevel(g, super_hex, sub_topic_data, depth, transition
             var hide_func = function () {
                 //console.log("su r",sub_hex_r * render_info.hexagon_scale * (render_info.zoom_scale))
                 if (sub_hex_r * render_info.hexagon_scale * (render_info.zoom_scale) > 3 * render_info.min_hex_r) {
-                    return 0;
+                    return 0.15;
                 }
                 return 1
 
@@ -579,7 +579,7 @@ function render_hexmap_toplevel(svg, data, transition) {
             var hide_func = function () {
                 //console.log("su r",sub_hex_r * render_info.hexagon_scale * (render_info.zoom_scale))
                 if (1 * render_info.hexagon_scale * (render_info.zoom_scale) > 3 * render_info.min_hex_r) {
-                    return 0;
+                    return 0.05;
                 }
                 return 1
 
@@ -589,7 +589,7 @@ function render_hexmap_toplevel(svg, data, transition) {
                 .duration(500)
                 .style("opacity", hide_func)
                 .style("visibility", function () {
-                    return hide_func() == 0 ? "hidden" : "visible";
+                    //return hide_func() == 0 ? "hidden" : "visible";
                 })
         }
 
