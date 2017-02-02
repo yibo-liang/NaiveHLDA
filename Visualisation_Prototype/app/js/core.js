@@ -2,21 +2,6 @@
  * Created by Devid on 2017/1/25.
  */
 
-// Method is assumed to be a standard D3 getter-setter:
-// If passed with no arguments, gets the value.
-// If passed with arguments, sets the value and returns the target.
-function d3_rebind(target, source, method) {
-    return function () {
-        var value = method.apply(source, arguments);
-        return value === source ? target : value;
-    };
-}
-d3.rebind = function (target, source) {
-    var i = 1, n = arguments.length, method;
-    while (++i < n) target[method = arguments[i]] = d3_rebind(target, source, source[method]);
-    return target;
-};
-
 
 var render_info = {
 
@@ -55,54 +40,11 @@ var render_info = {
     }
 }
 
-function clickcancel() {
-    //cancel click event if double click, or if dragged
-    var event = d3.dispatch('click', 'dblclick');
-
-    function cc(selection) {
-        var down,
-            tolerance = 5,
-            last,
-            wait = null;
-        // euclidean distance
-        function dist(a, b) {
-            return Math.sqrt(Math.pow(a[0] - b[0], 2), Math.pow(a[1] - b[1], 2));
-        }
-
-        selection.on('mousedown', function () {
-            down = d3.mouse(document.body);
-            last = +new Date();
-        });
-        selection.on('mouseup', function () {
-            if (dist(down, d3.mouse(document.body)) > tolerance) {
-                return;
-            } else {
-                if (wait) {
-                    window.clearTimeout(wait);
-                    wait = null;
-                    console.log(event)
-                    event._.dblclick[0].value(d3.event);
-                } else {
-                    wait = window.setTimeout((function (e) {
-                        return function () {
-                            if (event._.click)
-                                event._.click[0].value(d3.event);
-                            wait = null;
-                        };
-                    })(d3.event), 300);
-                }
-            }
-        });
-    };
-    return d3.rebind(cc, event, 'on');
-}
 function zoom_to_depth(depth, dx, dy) {
     var super_group = d3.select("g.super_group")
     render_info.zoom_power = (depth + 1) * 2;
 
-
     render_info.zoom_power = Math.min(Math.max(render_info.zoom_power, 1), 7);
-
     render_info.zoom_scale = Math.pow(render_info.zoom_base, render_info.zoom_power - 1)
     console.log(render_info.view.x, render_info.view.y, "---")
     render_info.view.x = -dx;

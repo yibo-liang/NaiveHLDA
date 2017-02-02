@@ -11,20 +11,27 @@ function hierarchical_hexmap(dom_container) {
     _this.hexmap_data = null;
     _this.topic_data = null;
     _this.container = d3.select(dom_container);
+    _this.panel = null;
+    _this.mini_map = null;
+    _this.word_cloud = null;
+
+
     _this.loaded = false;
     _this.render_on_load = true;
 
-    var client_rect = _this.container._groups[0][0].getBoundingClientRect();
-
+    _this.boundary_box = null;
 
     _this.config = {
-        height: client_rect.height,
-        width: client_rect.width,
+        height: null,
+        width: null,
         hexagon_scale: 80,
         min_hex_r: 80,
         transition_duration: 300,
         max_depth: 2,
-        cluster_border_width: 1.5
+        cluster_border_width: 1.5,
+        panel_width: 500,
+        cloud_height: 300,
+        minimap_height: 300
     }
 
 
@@ -68,9 +75,29 @@ function hierarchical_hexmap(dom_container) {
     }
 
 
+    var zoom_to_depth = function (depth, dx, dy) {
+        var dpower = (depth + 1) * 2 + 1;
+        if (-dx == _this.view.x && -dy == _this.view.y || dpower < _this.view.zoom_power) {
+            _this.view.zoom_power = (depth + 1) * 2 + 1;
+            _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
+            _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
+        }
+
+        _this.view.x = -dx;
+        _this.view.y = -dy;
+        drag_graph(_this.view_wrap, true);
+        _this.render();
+    }
+
     var prepare_data = function () {
 
         //function to find cluster neighbour and borders for top level
+        var boundary_box = {
+            min_x: 9999,
+            min_y: 9999,
+            max_x: -9999,
+            max_y: -9999
+        }
 
         function determineRr(hexagons) {
             //Determines hexagon radius 'r' from min distance of neighbours
@@ -143,11 +170,18 @@ function hierarchical_hexmap(dom_container) {
                 data.data.hexagons[i] = {
                     x: x,
                     y: y,
-                    absolute_x: parent_coor.absolute_x + x * Math.pow(1 / 3, data.depth),
-                    absolute_y: parent_coor.absolute_y + y * Math.pow(1 / 3, data.depth),
+                    absolute_x: parent_coor.absolute_x + x * Math.pow(1 / 3, data.depth - 1),
+                    absolute_y: parent_coor.absolute_y + y * Math.pow(1 / 3, data.depth - 1),
                     pos: i
                 }
-                //data.children[i].words = data.data.topics[i];
+
+                //update boundary box
+                var d = data.data.hexagons[i];
+                if (d.absolute_x > boundary_box.max_x) boundary_box.max_x = d.absolute_x;
+                if (d.absolute_y > boundary_box.max_y) boundary_box.max_y = d.absolute_y;
+                if (d.absolute_x < boundary_box.min_x) boundary_box.min_x = d.absolute_x;
+                if (d.absolute_y < boundary_box.min_y) boundary_box.min_y = d.absolute_y;
+
 
             }
             data.data.hexagons[6] = {
@@ -192,6 +226,13 @@ function hierarchical_hexmap(dom_container) {
                     absolute_y: y,
                     pos: i
                 }
+                //update boundary box value
+                var d = _this.topic_data.data.hexagons[i];
+                if (d.absolute_x > boundary_box.max_x) boundary_box.max_x = d.absolute_x;
+                if (d.absolute_y > boundary_box.max_y) boundary_box.max_y = d.absolute_y;
+                if (d.absolute_x < boundary_box.min_x) boundary_box.min_x = d.absolute_x;
+                if (d.absolute_y < boundary_box.min_y) boundary_box.min_y = d.absolute_y;
+
 
                 set_all_position(_this.topic_data.children[i], _this.topic_data.data.hexagons[i]);
             }
@@ -204,6 +245,8 @@ function hierarchical_hexmap(dom_container) {
                 enter_render(_this.topic_data, _this.view_wrap);
                 update_render(_this.topic_data, _this.view_wrap);
             }
+
+            _this.boundary_box = boundary_box;
         }
 
 
@@ -231,8 +274,6 @@ function hierarchical_hexmap(dom_container) {
         return _this;
     }
 
-    var offsetx = _this.config.width / 2;
-    var offsety = _this.config.height / 2;
 
     function drag_graph(super_group, transition) {
         if (transition) {
@@ -254,8 +295,39 @@ function hierarchical_hexmap(dom_container) {
         }
     }
 
+    var offsetx;
+    var offsety
     _this.init = function (render_onload) {
         //init svg
+
+        var client_rect = _this.container._groups[0][0].getBoundingClientRect();
+        _this.config.width = client_rect.width - _this.config.panel_width;
+        _this.config.height = client_rect.height;
+        //adding panel
+
+        offsetx = _this.config.width / 2;
+        offsety = _this.config.height / 2;
+
+        _this.panel = _this.container.append("div")
+            .attr("class", "panel")
+            .style("position", "absolute")
+            .style("left", _this.config.width + "px")
+            .style("height", _this.config.height + "px")
+            .style("width", _this.config.panel_width + "px")
+
+        var panel_wrap = _this.panel.append("div")
+            .style("position", "relative")
+            .style("height", "100%")
+            .style("width", "100%")
+
+        _this.mini_map = panel_wrap.append("div")
+            .attr("class", "mini-map")
+            .style("position", "absolute")
+            .style("top", _this.config.height - _this.config.minimap_height + "px")
+            .style("height", _this.config.minimap_height+"px")
+            .style("width", "100%");
+
+        //adding svg
         _this.svg = _this.container.append("svg")
             .attr("height", _this.config.height + "px")
             .attr("width", _this.config.width + "px")
@@ -304,8 +376,11 @@ function hierarchical_hexmap(dom_container) {
                     var dy = pos[1] - _this.view.drag_start_pos.y;
                     //console.log("mousemove", dy, dx);
                     var scale = _this.view.zoom_scale;
-                    _this.view.x = _this.view.drag_d_pos.x + dx / scale;
-                    _this.view.y = _this.view.drag_d_pos.y + dy / scale;
+                    var nx = _this.view.drag_d_pos.x + dx / scale;
+                    var ny = _this.view.drag_d_pos.y + dy / scale;
+
+                    _this.view.x = Math.min(Math.max(_this.boundary_box.min_x, nx), _this.boundary_box.max_x);
+                    _this.view.y = Math.min(Math.max(_this.boundary_box.min_y, ny), _this.boundary_box.max_y);
 
                     drag_graph(_this.view_wrap);
                 }
@@ -498,12 +573,9 @@ function hierarchical_hexmap(dom_container) {
                     return d.label
                 })
                 .style("transform", function (d, i) {
-                    var new_i;
                     var font_size = 24;
-                    if (i == 0) new_i = 0;
-                    if (i == 1) new_i = 1;
-                    if (i == 2) new_i = -1;
-                    return "translate(" + 0 + "," + (new_i) * font_size + "px)"
+                    var order = [0, 1, -1]
+                    return "translate(" + 0 + "," + (order[i]) * font_size + "px)"
                 })
                 .style("font-size", function (d, i) {
                     return i == 0 ? "18" : "14";
@@ -517,6 +589,17 @@ function hierarchical_hexmap(dom_container) {
                 .transition()
                 .duration(_this.config.transition_duration)
                 .style("opacity", zoom_fade(node_data))
+
+            var cc = clickcancel();
+            container.call(cc);
+            cc
+                .on("dblclick", function () {
+                    console.log("click dpth = " + 0);
+                    zoom_to_depth(node_data.depth, d.absolute_x, d.absolute_y);
+                })
+                .on("click", function () {
+                    console.log(d);
+                })
         }
 
     }
@@ -649,7 +732,7 @@ function hierarchical_hexmap(dom_container) {
     _this.enable_zooming = function () {
 
         bind_mousewheel("hex_svg", function (delta) {
-            _this.view.zoom_power = Math.min(Math.max(delta * 1 + _this.view.zoom_power, 1), 7);
+            _this.view.zoom_power = Math.min(Math.max(delta * 0.5 + _this.view.zoom_power, 1), 7);
             _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
             _this.view.zoom_scale = Math.min(Math.max(_this.view.zoom_scale, 1), 27);
             console.log(zoom_depth())

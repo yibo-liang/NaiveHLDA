@@ -1,9 +1,20 @@
 svg text{
     pointer-events: none;
-
+    font: 14px 'Open Sans', sans-serif;
     cursor: default;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+div.panel{
+    -webkit-box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.38);
+    -moz-box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.38);
+    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.38);
+    background-color: rgba(251,251,255,0.9);
+}
+
+div.mini-map{
+    background-color: rgba(255,255,255,0.9);
 }
