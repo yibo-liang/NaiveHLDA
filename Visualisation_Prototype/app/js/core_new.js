@@ -17,14 +17,14 @@ function hierarchical_hexmap(dom_container) {
     var client_rect = _this.container._groups[0][0].getBoundingClientRect();
 
 
-
     _this.config = {
         height: client_rect.height,
         width: client_rect.width,
         hexagon_scale: 80,
         min_hex_r: 80,
         transition_duration: 300,
-        max_depth: 2
+        max_depth: 2,
+        cluster_border_width: 1.5
     }
 
 
@@ -54,11 +54,19 @@ function hierarchical_hexmap(dom_container) {
         cluster_border: "rgba(199,199,199,1)"
     }
 
-
+    //helper function
     var zoom_depth = function () {
         var k = Math.log(_this.view.zoom_scale) / Math.log(_this.view.zoom_base);
         return Math.ceil((k + 1) / 2) - 1;
     }
+
+    var padding_shrink = function (node_data) {
+        return (_this.config.hexagon_scale -
+            (node_data.depth == 0 ? _this.config.cluster_border_width : 0))
+            / _this.config.hexagon_scale;
+
+    }
+
 
     var prepare_data = function () {
 
@@ -350,15 +358,16 @@ function hierarchical_hexmap(dom_container) {
         return res;
     }
 
-    function draw_boarders(container, borders) {
+    function draw_boarders(container, node_data, borders) {
         //console.log("borders", borders)
+        var shrink = padding_shrink(node_data);
         container.selectAll("path")
             .data(borders)
             .enter()
             .append("path")
             .attr("d", function (datum, i) {
                 var rotate = datum - 1;
-                var r = 1 * _this.config.hexagon_scale;
+                var r = 1 * _this.config.hexagon_scale / shrink;
                 var rs1 = ((rotate - 1) ) / 6;
                 var x1 = 0 + Math.cos(Math.PI * 2 * rs1 + Math.PI / 6) * r;
                 var y1 = 0 + Math.sin(Math.PI * 2 * rs1 + Math.PI / 6) * r;
@@ -369,7 +378,7 @@ function hierarchical_hexmap(dom_container) {
 
             })
             .attr("stroke", _this.colors.cluster_border)
-            .attr("stroke-width", "3")
+            .attr("stroke-width", "2")
             .attr("stroke-linecap", "round")
             .style("z-index", 999)
             .style("opacity", 0)
@@ -432,7 +441,7 @@ function hierarchical_hexmap(dom_container) {
             .enter()
 
         pie_g.insert("path", ":first-child")
-            .style("opacity", "0.5")
+            .style("opacity", "0.3")
             .attr("class", "arc")
             .attr("d", arc)
             .style("fill", function (d, i) {
@@ -460,7 +469,7 @@ function hierarchical_hexmap(dom_container) {
 
             //draw borders for toplevel
             if (node_data.depth == 0) {
-                draw_boarders(container, d.borders);
+                draw_boarders(container, node_data, d.borders);
             }
 
             //draw pie
@@ -506,7 +515,6 @@ function hierarchical_hexmap(dom_container) {
 
             data_group
                 .transition()
-                .delay(300)
                 .duration(_this.config.transition_duration)
                 .style("opacity", zoom_fade(node_data))
         }
@@ -517,7 +525,7 @@ function hierarchical_hexmap(dom_container) {
         var node_data_children = node_data.children;
 
         var scale = node_data.depth > 0 ? 1 / 3 : 1; //scale for sub level
-        var padding_shrink = (_this.config.hexagon_scale - (node_data.depth == 0 ? 1.5 : 0)) / _this.config.hexagon_scale;
+        var shrink = padding_shrink(node_data);
 
         var hexagons = filter_invisible_hexagons(node_data.data.hexagons, node_data.depth);
 
@@ -538,7 +546,7 @@ function hierarchical_hexmap(dom_container) {
             .attr("class", "wrap-single-" + node_data.depth)
             .style("transform", function (d, i) {
                 return "translate(" + d.x + "px," + d.y + "px) " +
-                    "scale(" + scale * padding_shrink + "," + scale * padding_shrink + ")";
+                    "scale(" + scale * shrink + "," + scale * shrink + ")";
             })
             .each(function (d, i) {
                 draw_topic(d3.select(this), node_data, d, d.pos)
@@ -555,7 +563,7 @@ function hierarchical_hexmap(dom_container) {
                 var next_level_wrap = next.append("g")
                     .attr("class", "level-wrap-" + (node_data.depth + 1))
                     .style("transform", "translate(" + d.x + "px," + d.y + "px) " +
-                        "scale(" + scale * padding_shrink + "," + scale * padding_shrink + ")"
+                        "scale(" + scale * shrink + "," + scale * shrink + ")"
                     )
                     .attr("info", function () {
                         return d.pos
@@ -571,7 +579,7 @@ function hierarchical_hexmap(dom_container) {
         var node_data_children = node_data.children;
 
         var scale = node_data.depth > 0 ? 1 / 3 : 1; //scale for sub level
-        var padding_shrink = (_this.config.hexagon_scale - (node_data.depth == 0 ? 1.5 : 0)) / _this.config.hexagon_scale;
+        var shrink = padding_shrink(node_data)
         //rendering
         //hexagon data, position
         var hexagons = filter_invisible_hexagons(node_data.data.hexagons, node_data.depth);
@@ -595,7 +603,7 @@ function hierarchical_hexmap(dom_container) {
             .style("opacity", 0)
             .style("transform", function (d) {
                 return "translate(" + d.x + "px," + d.y + "px) " +
-                    "scale(" + scale * padding_shrink + "," + scale * padding_shrink + ")";
+                    "scale(" + scale * shrink + "," + scale * shrink + ")";
             })
             .each(function (d, i) {
                 draw_topic(d3.select(this), node_data, d, d.pos)
