@@ -1,4 +1,4 @@
-svg text{
+svg text {
     pointer-events: none;
     font: 14px 'Open Sans', sans-serif;
     cursor: default;
@@ -8,13 +8,32 @@ svg text{
     user-select: none;
 }
 
-div.panel{
-    -webkit-box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.38);
-    -moz-box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.38);
-    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.38);
-    background-color: rgba(251,251,255,0.9);
+div.panel {
+    -webkit-box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.38);
+    -moz-box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.38);
+    box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.38);
+    background-color: rgba(251, 251, 255, 0.9);
 }
 
-div.mini-map{
-    background-color: rgba(255,255,255,0.9);
+div.mini-map {
+    background-color: rgba(255, 255, 255, 0.5);
+    -webkit-box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.5);
+    -moz-box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.5);
+    box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    overflow: hidden;
+}
+
+canvas.mini-map-canvas {
+    position: absolute;
+}
+
+div.mini-map-view {
+    border-width: 2px;
+    border-color: rgba(55, 55, 55, 0.7);
+    border-style: solid;
+    background-color: rgba(77, 55, 66,0.5);
+    opacity: 0.5;
+    /*z-index: 101;*/
+    position: absolute;
 }

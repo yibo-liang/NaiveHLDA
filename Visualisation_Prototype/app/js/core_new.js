@@ -8,6 +8,19 @@ function hierarchical_hexmap(dom_container) {
     var _this = this;
 
 
+    _this.groupColors = [
+        'rgba(188, 36, 60,0.5)',
+        'rgba(91, 94, 166,0.5)',
+        'rgba(0, 152, 116,0.5)',
+        'rgba(221, 65, 36,0.5)',
+        'rgba(239, 192, 80,0.5)',
+        'rgba(111, 65, 129,0.5)',
+        'rgba(195, 68, 122,0.5)',
+        'rgba(178, 186, 182,0.5)',
+        'rgba(147, 86, 53,0.5)',
+        'rgba(85, 180, 176,0.5)'
+    ];
+
     _this.hexmap_data = null;
     _this.topic_data = null;
     _this.container = d3.select(dom_container);
@@ -24,20 +37,25 @@ function hierarchical_hexmap(dom_container) {
     _this.config = {
         height: null,
         width: null,
-        hexagon_scale: 80,
-        min_hex_r: 80,
+        hexagon_scale: 100,
+        min_hex_r: 100,
         transition_duration: 300,
         max_depth: 2,
         cluster_border_width: 1.5,
         panel_width: 500,
         cloud_height: 300,
-        minimap_height: 300
     }
 
 
     _this.svg = null;
     _this.view_wrap = null;
+
     _this.view = {
+        minimap_height: 140,
+        minimap_scale: null,
+        minimap_offsetx: null,
+        minimap_offsety: null,
+
         zoom_scale: 1,
         zoom_power: 1,
         zoom_base: Math.sqrt(3),
@@ -241,12 +259,13 @@ function hierarchical_hexmap(dom_container) {
             console.log(_this.topic_data)
             // _this.topic_data = JSON.parse(JSON.stringify(_this.topic_data));
             // _this.loaded = true;
+            _this.boundary_box = boundary_box;
             if (_this.render_on_load) {
                 enter_render(_this.topic_data, _this.view_wrap);
                 update_render(_this.topic_data, _this.view_wrap);
+                enable_minimap();
             }
 
-            _this.boundary_box = boundary_box;
         }
 
 
@@ -293,6 +312,7 @@ function hierarchical_hexmap(dom_container) {
                     + " scale(" + _this.view.zoom_scale + "," + _this.view.zoom_scale + ")");
 
         }
+        change_minimap_view();
     }
 
     var offsetx;
@@ -305,8 +325,10 @@ function hierarchical_hexmap(dom_container) {
         _this.config.height = client_rect.height;
         //adding panel
 
+
         offsetx = _this.config.width / 2;
         offsety = _this.config.height / 2;
+
 
         _this.panel = _this.container.append("div")
             .attr("class", "panel")
@@ -319,13 +341,6 @@ function hierarchical_hexmap(dom_container) {
             .style("position", "relative")
             .style("height", "100%")
             .style("width", "100%")
-
-        _this.mini_map = panel_wrap.append("div")
-            .attr("class", "mini-map")
-            .style("position", "absolute")
-            .style("top", _this.config.height - _this.config.minimap_height + "px")
-            .style("height", _this.config.minimap_height+"px")
-            .style("width", "100%");
 
         //adding svg
         _this.svg = _this.container.append("svg")
@@ -341,6 +356,13 @@ function hierarchical_hexmap(dom_container) {
                 + (_this.view.x * _this.view.zoom_scale + offsetx) + "px,"
                 + (_this.view.y * _this.view.zoom_scale + offsety) + "px)"
                 + " scale(" + _this.view.zoom_scale + "," + _this.view.zoom_scale + ")");
+
+        //wordcloud
+
+        _this.word_cloud = panel_wrap.append("div")
+            .style("height", "300px")
+            .style("width", "100%");
+
 
         //binding mouse events for dragging effect
         _this.svg
@@ -404,6 +426,96 @@ function hierarchical_hexmap(dom_container) {
             }
         }
         return points;
+    }
+
+    var enable_minimap = function () {
+        var dx = (_this.boundary_box.max_x - _this.boundary_box.min_x);
+        var dy = (_this.boundary_box.max_y - _this.boundary_box.min_y);
+        var hw_scale = dx / dy
+
+        var padding = 20;
+
+        _this.mini_map = _this.container.append("div")
+            .attr("class", "mini-map")
+            .style("position", "absolute")
+            .style("left", "30px")
+            .style("top", _this.config.height - _this.view.minimap_height - padding * 2 - 30 + "px")
+            .style("height", _this.view.minimap_height + padding * 2 + "px")
+            .style("width", _this.view.minimap_height * hw_scale + padding * 2 + "px")
+            .append("div")
+            .style("position", "relative")
+            .on("click", function () {
+                var coordinates = d3.mouse(this);
+                _this.view.x = (-coordinates[0] + _this.view.minimap_offsetx) / _this.view.minimap_scale;
+                _this.view.y = (-coordinates[1] + _this.view.minimap_offsety) / _this.view.minimap_scale;
+                drag_graph(_this.view_wrap, true);
+                _this.render();
+            })
+
+        _this.mini_map.append("div")
+            .attr("class", "mini-map-view")
+            .style("height", _this.view.minimap_height + padding * 2 + "px")
+            .style("width", _this.view.minimap_height * hw_scale + padding * 2 + "px")
+
+        _this.mini_map.append("canvas")
+            .attr("class", "mini-map-canvas")
+            .attr("height", _this.view.minimap_height + padding * 2 + "px")
+            .attr("width", _this.view.minimap_height * hw_scale + padding * 2 + "px")
+
+        var scale = (_this.view.minimap_height) / dy;
+        _this.view.minimap_scale = scale;
+
+        var m_hex_r = _this.config.hexagon_scale * scale;
+        var hexagons = _this.topic_data.data.hexagons;
+
+        var canvas = _this.mini_map.select("canvas")._groups[0][0];
+
+        var ox = dx / 2 * scale + padding;
+        var oy = dy / 2 * scale + padding
+
+        _this.view.minimap_offsetx = ox;
+        _this.view.minimap_offsety = oy;
+
+
+        console.log(scale, m_hex_r, canvas)
+        var ctx = canvas.getContext("2d");
+        ctx.strokeStyle = "rgba(55,55,55,0.5)"
+        ctx.strokeWidth = "1"
+        for (var i = 0; i < hexagons.length; i++) {
+            ctx.beginPath();
+
+            ctx.fillStyle = _this.groupColors[(_this.hexmap_data["hexmapData"][i].clusterAgglomerative)];
+
+            var r = 0.5 / 6 * Math.PI * 2;
+            var x = hexagons[i].absolute_x * scale + m_hex_r * Math.cos(r) + ox;
+            var y = hexagons[i].absolute_y * scale + m_hex_r * Math.sin(r) + oy;
+            ctx.moveTo(x, y)
+            console.log(hexagons[i], x, y)
+            for (var j = 1; j < 6; j++) {
+
+                var r = (j + .5) / 6 * Math.PI * 2;
+                var x = hexagons[i].absolute_x * scale + m_hex_r * Math.cos(r) + ox;
+                var y = hexagons[i].absolute_y * scale + m_hex_r * Math.sin(r) + oy;
+                ctx.lineTo(x, y);
+                console.log(x, y)
+            }
+            ctx.closePath();
+            ctx.stroke()
+            ctx.fill();
+        }
+
+
+    }
+
+    var change_minimap_view = function () {
+        var mini_view = _this.mini_map.select("div.mini-map-view");
+        var scale = 1 / _this.view.zoom_scale;
+        mini_view
+            .transition()
+            .ease(_this.view.zoom_ease)
+            .style("transform", "scale(" + scale + "," + scale + ") "
+                + "translate(" + (-_this.view.x * _this.view.minimap_scale / scale) + "px,"
+                + (-_this.view.y * _this.view.minimap_scale / scale) + "px)")
     }
 
 
@@ -531,6 +643,54 @@ function hierarchical_hexmap(dom_container) {
         return 1;
     }
 
+    var show_cloud = function (topic_words) {
+        var max = d3.max(topic_words, weight);
+        var min = d3.min(topic_words, weight);
+
+        function weight(d) {
+            return d.weight;
+        }
+
+        function fontsize(d) {
+            return 15 + 10 * (d.weight - min) / (max - min);
+        }
+
+        d3.layout.cloud().size([_this.config.panel_width, 300])
+            .words(topic_words)
+            .text(function (d) {
+                return d.label
+            })
+            .rotate(0)
+            .fontSize(fontsize)
+            .spiral('rectangular')
+            .padding(5)
+            .font('Arial, Helvetica, sans-serif')
+            .random(function () {
+                return 0.5;
+            })
+            .on("end", draw)
+            .start();
+
+        function draw(words) {
+            console.log(words)
+            var selection = _this.word_cloud.selectAll("text").data(words);
+
+            selection.enter()
+                .append("text")
+                .style("font-size", fontsize)
+                .attr("transform", function (d) {
+                    return "translate(" + [d.x, d.y] + ") rotate(" + d.rotate + ")";
+                })
+                .text(function (d) {
+                    return d.label;
+                })
+
+
+        }
+
+    }
+
+
     var draw_topic = function (container, node_data, d, i) {
 
 
@@ -598,7 +758,7 @@ function hierarchical_hexmap(dom_container) {
                     zoom_to_depth(node_data.depth, d.absolute_x, d.absolute_y);
                 })
                 .on("click", function () {
-                    console.log(d);
+                    show_cloud(node_data.data.topics[i]);
                 })
         }
 
@@ -625,6 +785,7 @@ function hierarchical_hexmap(dom_container) {
             })
 
         //enter selection
+
         selection.enter().append("g")
             .attr("class", "wrap-single-" + node_data.depth)
             .style("transform", function (d, i) {
@@ -680,6 +841,7 @@ function hierarchical_hexmap(dom_container) {
             .data(hexagons, function (d) {
                 return d.pos
             })
+
         //enter
         var polygon_wrap_enter = selection.enter().append("g")
             .attr("class", "wrap-single-" + node_data.depth)
