@@ -9,16 +9,16 @@ function hierarchical_hexmap(dom_container) {
 
 
     _this.groupColors = [
-        'rgba(188, 36, 60,0.5)',
-        'rgba(91, 94, 166,0.5)',
-        'rgba(0, 152, 116,0.5)',
-        'rgba(221, 65, 36,0.5)',
-        'rgba(239, 192, 80,0.5)',
-        'rgba(111, 65, 129,0.5)',
-        'rgba(195, 68, 122,0.5)',
-        'rgba(178, 186, 182,0.5)',
-        'rgba(147, 86, 53,0.5)',
-        'rgba(85, 180, 176,0.5)'
+        'rgba(188, 36, 60,0.3)',
+        'rgba(91, 94, 166,0.3)',
+        'rgba(0, 152, 116,0.3)',
+        'rgba(221, 65, 36,0.3)',
+        'rgba(239, 192, 80,0.3)',
+        'rgba(111, 65, 129,0.3)',
+        'rgba(195, 68, 122,0.3)',
+        'rgba(178, 186, 182,0.3)',
+        'rgba(147, 86, 53,0.3)',
+        'rgba(85, 180, 176,0.3)'
     ];
 
     _this.hexmap_data = null;
@@ -51,6 +51,8 @@ function hierarchical_hexmap(dom_container) {
     _this.view_wrap = null;
 
     _this.view = {
+        selected_hex: null,
+
         minimap_height: 140,
         minimap_scale: null,
         minimap_offsetx: null,
@@ -75,6 +77,7 @@ function hierarchical_hexmap(dom_container) {
 
     _this.colors = {
         background: "rgba(255,255,255,0.95)",
+        selected: "rgba(244,244,244,1)",
         border: "rgba(233,233,233, 1)",
         cluster_border: "rgba(199,199,199,1)"
     }
@@ -87,7 +90,7 @@ function hierarchical_hexmap(dom_container) {
 
     var padding_shrink = function (node_data) {
         return (_this.config.hexagon_scale -
-            (node_data.depth == 0 ? _this.config.cluster_border_width : 0))
+            (node_data.depth == 0 ? _this.config.cluster_border_width / 2 : 0.5))
             / _this.config.hexagon_scale;
 
     }
@@ -324,7 +327,8 @@ function hierarchical_hexmap(dom_container) {
         _this.config.width = client_rect.width - _this.config.panel_width;
         _this.config.height = client_rect.height;
         //adding panel
-
+        _this.config.hexagon_scale = (_this.config.width - 100) / 12;
+        _this.config.min_hex_r = _this.config.hexagon_scale;
 
         offsetx = _this.config.width / 2;
         offsety = _this.config.height / 2;
@@ -357,56 +361,55 @@ function hierarchical_hexmap(dom_container) {
                 + (_this.view.y * _this.view.zoom_scale + offsety) + "px)"
                 + " scale(" + _this.view.zoom_scale + "," + _this.view.zoom_scale + ")");
 
-        //wordcloud
+        //word cloud
 
         _this.word_cloud = panel_wrap.append("div")
             .style("height", "300px")
-            .style("width", "100%");
+            .style("width", "100%")
+            .append("svg")
+            .attr("height", "100%")
+            .attr("width", "100%")
+            .append("g");
 
+        function drag_start() {
+            _this.view.dragging = true;
+            var pos = d3.mouse(this);
+            _this.view.drag_start_pos.x = pos[0];
+            _this.view.drag_start_pos.y = pos[1];
+
+            _this.view.drag_d_pos.x = _this.view.x;
+            _this.view.drag_d_pos.y = _this.view.y;
+        }
+
+        function dragging() {
+            if (_this.view.dragging) {
+                var pos = d3.mouse(this);
+                var dx = pos[0] - _this.view.drag_start_pos.x;
+                var dy = pos[1] - _this.view.drag_start_pos.y;
+                var scale = _this.view.zoom_scale;
+                var nx = _this.view.drag_d_pos.x + dx / scale;
+                var ny = _this.view.drag_d_pos.y + dy / scale;
+
+                _this.view.x = Math.min(Math.max(_this.boundary_box.min_x, nx), _this.boundary_box.max_x);
+                _this.view.y = Math.min(Math.max(_this.boundary_box.min_y, ny), _this.boundary_box.max_y);
+
+                drag_graph(_this.view_wrap);
+            }
+        }
+
+        function drag_finish() {
+            if (_this.view.dragging) {
+                _this.render();
+            }
+            _this.view.dragging = false;
+        }
 
         //binding mouse events for dragging effect
         _this.svg
-            .on("mousedown", function () {
-                _this.view.dragging = true;
-                var pos = d3.mouse(this);
-                _this.view.drag_start_pos.x = pos[0];
-                _this.view.drag_start_pos.y = pos[1];
-
-                _this.view.drag_d_pos.x = _this.view.x;
-                _this.view.drag_d_pos.y = _this.view.y;
-
-            })
-            .on("mouseup", function () {
-                if (_this.view.dragging) {
-                    _this.render();
-                }
-                _this.view.dragging = false;
-                //console.log("mouseup")
-            })
-            .on("mouseleave", function () {
-                if (_this.view.dragging) {
-                    _this.render();
-                }
-                _this.view.dragging = false;
-                //console.log("mouseleave")
-            })
-            .on("mousemove", function () {
-                if (_this.view.dragging) {
-                    var pos = d3.mouse(this);
-
-                    var dx = pos[0] - _this.view.drag_start_pos.x;
-                    var dy = pos[1] - _this.view.drag_start_pos.y;
-                    //console.log("mousemove", dy, dx);
-                    var scale = _this.view.zoom_scale;
-                    var nx = _this.view.drag_d_pos.x + dx / scale;
-                    var ny = _this.view.drag_d_pos.y + dy / scale;
-
-                    _this.view.x = Math.min(Math.max(_this.boundary_box.min_x, nx), _this.boundary_box.max_x);
-                    _this.view.y = Math.min(Math.max(_this.boundary_box.min_y, ny), _this.boundary_box.max_y);
-
-                    drag_graph(_this.view_wrap);
-                }
-            })
+            .on("mousedown", drag_start)
+            .on("mouseup", drag_finish)
+            .on("mouseleave", drag_finish)
+            .on("mousemove", dragging)
 
         if (render_onload) _this.render_on_load = render_onload;
 
@@ -452,15 +455,15 @@ function hierarchical_hexmap(dom_container) {
                 _this.render();
             })
 
-        _this.mini_map.append("div")
-            .attr("class", "mini-map-view")
-            .style("height", _this.view.minimap_height + padding * 2 + "px")
-            .style("width", _this.view.minimap_height * hw_scale + padding * 2 + "px")
-
         _this.mini_map.append("canvas")
             .attr("class", "mini-map-canvas")
             .attr("height", _this.view.minimap_height + padding * 2 + "px")
             .attr("width", _this.view.minimap_height * hw_scale + padding * 2 + "px")
+
+        _this.mini_map.append("div")
+            .attr("class", "mini-map-view")
+            .style("height", _this.view.minimap_height + padding * 2 + "px")
+            .style("width", _this.view.minimap_height * hw_scale + padding * 2 + "px")
 
         var scale = (_this.view.minimap_height) / dy;
         _this.view.minimap_scale = scale;
@@ -490,14 +493,14 @@ function hierarchical_hexmap(dom_container) {
             var x = hexagons[i].absolute_x * scale + m_hex_r * Math.cos(r) + ox;
             var y = hexagons[i].absolute_y * scale + m_hex_r * Math.sin(r) + oy;
             ctx.moveTo(x, y)
-            console.log(hexagons[i], x, y)
+            //console.log(hexagons[i], x, y)
             for (var j = 1; j < 6; j++) {
 
                 var r = (j + .5) / 6 * Math.PI * 2;
                 var x = hexagons[i].absolute_x * scale + m_hex_r * Math.cos(r) + ox;
                 var y = hexagons[i].absolute_y * scale + m_hex_r * Math.sin(r) + oy;
                 ctx.lineTo(x, y);
-                console.log(x, y)
+                // console.log(x, y)
             }
             ctx.closePath();
             ctx.stroke()
@@ -646,48 +649,99 @@ function hierarchical_hexmap(dom_container) {
     var show_cloud = function (topic_words) {
         var max = d3.max(topic_words, weight);
         var min = d3.min(topic_words, weight);
+        var ws = JSON.parse(JSON.stringify(topic_words));
+        console.log(max, min);
+        for (var i = 0; i < ws.length; i++) {
+            ws[i].size = (ws[i].weight);
+            delete ws[i].weight;
+        }
+        console.log(ws)
+
+        var fill = d3.scaleOrdinal(d3.schemeCategory20);
 
         function weight(d) {
-            return d.weight;
+            return (d.weight);
         }
 
         function fontsize(d) {
-            return 15 + 10 * (d.weight - min) / (max - min);
+            var k = 14 + 32 * (d.size - min + 1) / (max - min + 1);
+            return k;
         }
 
-        d3.layout.cloud().size([_this.config.panel_width, 300])
-            .words(topic_words)
-            .text(function (d) {
-                return d.label
+        _this.word_cloud
+            .attr("transform",
+                "translate(" + [_this.config.panel_width / 2, _this.config.cloud_height / 2] + ")");
+
+        function draw(words) {
+
+            console.log("draw words", words)
+            var selection = _this.word_cloud.selectAll("text")
+                .data(words, function (d) {
+                    return d.text + d.size;
+                });
+
+            var enter = selection.enter()
+                .append("text")
+                .style("fill", function (d, i) {
+                    return fill(i);
+                })
+                .attr("text-anchor", "middle")
+                .text(function (d) {
+                    return d.label
+                })
+                .attr("transform", function (d) {
+                    var k = "translate(" + 0 + "," + 0 + ") " +
+                        "rotate(" + d.rotate + ")"
+                    //console.log(k);
+                    return k;
+                })
+                .style("opacity", 0)
+
+            enter
+                .style("font-size", function (d) {
+                    return d.size;
+                })
+                .transition()
+                .style("opacity", 1)
+                .attr("transform", function (d) {
+                    var k = "translate(" + d.x + "," + d.y + ") " +
+                        "rotate(" + d.rotate + ")"
+                    //console.log(k);
+                    return k;
+                })
+            selection.transition()
+                .style("opacity", 1)
+                .attr("transform", function (d) {
+                    var k = "translate(" + d.x + "," + d.y + ") " +
+                        "rotate(" + d.rotate + ")"
+                    //console.log(k);
+                    return k;
+                })
+                .style("font-size", function (d) {
+                    return d.size;
+                })
+
+            selection.exit()
+                .transition()
+                .style('opacity', 0)
+                .attr('font-size', 1)
+                .remove();
+        }
+
+        d3.layout.cloud()
+            .size([_this.config.panel_width, _this.config.cloud_height])
+            .words(ws)
+            .rotate(function () {
+                return 0
             })
-            .rotate(0)
-            .fontSize(fontsize)
-            .spiral('rectangular')
             .padding(5)
-            .font('Arial, Helvetica, sans-serif')
-            .random(function () {
-                return 0.5;
+            .font("Impact")
+            .fontSize(fontsize)
+            .text(function (d) {
+                return d.label;
             })
             .on("end", draw)
             .start();
-
-        function draw(words) {
-            console.log(words)
-            var selection = _this.word_cloud.selectAll("text").data(words);
-
-            selection.enter()
-                .append("text")
-                .style("font-size", fontsize)
-                .attr("transform", function (d) {
-                    return "translate(" + [d.x, d.y] + ") rotate(" + d.rotate + ")";
-                })
-                .text(function (d) {
-                    return d.label;
-                })
-
-
-        }
-
     }
 
 
@@ -755,10 +809,22 @@ function hierarchical_hexmap(dom_container) {
             cc
                 .on("dblclick", function () {
                     console.log("click dpth = " + 0);
+                    _this.view.selected_hex = {
+                        data: node_data,
+                        hex: d
+                    }
+
                     zoom_to_depth(node_data.depth, d.absolute_x, d.absolute_y);
                 })
                 .on("click", function () {
                     show_cloud(node_data.data.topics[i]);
+
+                    _this.view.selected_hex = {
+                        data: node_data,
+                        hex: d
+                    }
+
+                    _this.render();
                 })
         }
 
@@ -858,7 +924,22 @@ function hierarchical_hexmap(dom_container) {
             .style("opacity", 1)
 
 
-        // //update
+        // //update on click select
+        selection.select("polygon")
+            .transition()
+            .each(function (d) {
+                if (_this.view.selected_hex && d == _this.view.selected_hex.hex) {
+                    d3.select(this)
+                        .style("fill", _this.colors.selected)
+                        .style("stroke-width", 2)
+                        .style("stroke", "rgba(100,100,100,0.7")
+                } else {
+                    d3.select(this)
+                        .style("fill", _this.colors.background)
+                        .style("stroke-width", 1)
+                        .style("stroke", _this.colors.border)
+                }
+            })
 
         selection.select("g.data")
             .transition()

@@ -16,7 +16,7 @@ div.panel {
 }
 
 div.mini-map {
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.9);
     -webkit-box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.5);
     -moz-box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.5);
     box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.5);
@@ -36,4 +36,7 @@ div.mini-map-view {
     opacity: 0.5;
     /*z-index: 101;*/
     position: absolute;
+}
+polygon:hover{
+    stroke-width: 2;
 }
