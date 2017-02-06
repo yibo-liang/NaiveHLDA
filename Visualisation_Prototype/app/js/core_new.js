@@ -79,7 +79,7 @@ function hierarchical_hexmap(dom_container) {
         background: "rgba(255,255,255,0.95)",
         selected: "rgba(244,244,244,1)",
         border: "rgba(233,233,233, 1)",
-        cluster_border: "rgba(199,199,199,1)"
+        cluster_border: "rgba(88,88,88,1)"
     }
 
     //helper function
@@ -139,7 +139,7 @@ function hierarchical_hexmap(dom_container) {
         function addImmediateNeighboursAndBorders(hexagons) {
             //Function that finds list of immediate hexagon neighbours
             var r = determineRr(hexagons);
-            console.log(r)
+
             var dMin2 = r * r * 4; //squarded distance between immediate neighbours
 
             function addNeighbour(relativePosition, n, i, dx, dy) {
@@ -259,9 +259,7 @@ function hierarchical_hexmap(dom_container) {
             }
             delete _this.topic_data.data.submodels;
             addImmediateNeighboursAndBorders(_this.topic_data.data.hexagons)
-            console.log(_this.topic_data)
-            // _this.topic_data = JSON.parse(JSON.stringify(_this.topic_data));
-            // _this.loaded = true;
+
             _this.boundary_box = boundary_box;
             if (_this.render_on_load) {
                 enter_render(_this.topic_data, _this.view_wrap);
@@ -480,7 +478,7 @@ function hierarchical_hexmap(dom_container) {
         _this.view.minimap_offsety = oy;
 
 
-        console.log(scale, m_hex_r, canvas)
+        //console.log(scale, m_hex_r, canvas)
         var ctx = canvas.getContext("2d");
         ctx.strokeStyle = "rgba(55,55,55,0.5)"
         ctx.strokeWidth = "1"
@@ -650,12 +648,12 @@ function hierarchical_hexmap(dom_container) {
         var max = d3.max(topic_words, weight);
         var min = d3.min(topic_words, weight);
         var ws = JSON.parse(JSON.stringify(topic_words));
-        console.log(max, min);
+        //console.log(max, min);
         for (var i = 0; i < ws.length; i++) {
             ws[i].size = (ws[i].weight);
             delete ws[i].weight;
         }
-        console.log(ws)
+        //console.log(ws)
 
         var fill = d3.scaleOrdinal(d3.schemeCategory20);
 
@@ -674,7 +672,7 @@ function hierarchical_hexmap(dom_container) {
 
         function draw(words) {
 
-            console.log("draw words", words)
+            //console.log("draw words", words)
             var selection = _this.word_cloud.selectAll("text")
                 .data(words, function (d) {
                     return d.text + d.size;
@@ -809,6 +807,7 @@ function hierarchical_hexmap(dom_container) {
             cc
                 .on("dblclick", function () {
                     console.log("click dpth = " + 0);
+                    show_cloud(node_data.data.topics[i]);
                     _this.view.selected_hex = {
                         data: node_data,
                         hex: d
@@ -978,7 +977,7 @@ function hierarchical_hexmap(dom_container) {
             _this.view.zoom_power = Math.min(Math.max(delta * 0.5 + _this.view.zoom_power, 1), 7);
             _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
             _this.view.zoom_scale = Math.min(Math.max(_this.view.zoom_scale, 1), 27);
-            console.log(zoom_depth())
+            //console.log(zoom_depth())
             drag_graph(_this.view_wrap, true);
             _this.render()
         })
