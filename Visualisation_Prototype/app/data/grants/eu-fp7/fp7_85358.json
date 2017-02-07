@@ -1,0 +1,11 @@
+{
+  "id": "85358",
+  "title": "Rehabilitation of a discrete sensory motor learning function by a prosthetic chip",
+  "abstractText": "The objective of this project is to develop a full biohybrid rehabilitation and substitution methodology; replacing the aged cerebellar brain circuit with a biomimetic chip bidirectionally interfaced to the inputs and outputs of the system. Information processing will interface with the cerebellum to actuate a normal, real-time functional behavioural recovery, providing a proof-of-concept test for the functional rehabilitation of more complex neuronal systems.nnThe model neuronal system we have chosen is the cerebellar microcircuit involved in conditioning of the motor eyeblink response. Localized experimental or clinical damage to this microcircuit disrupts irreversibly the eyeblink conditioning while aging invariably compromises the acquisition and retention of the eyeblink response. nnUsing the aged rat as an experimental model we plan to integrate a biomimetic chip to rehabilitate a discrete sensory-motor learning function lost in the senescent cerebellar microcircuit, through the development of multiple enabling technologies.   nnWe will develop novel electrodes to both detect the stimulus and trigger the eyeblink response. The stimulus signals will be extracted from background neuronal activity and undergo conditioning, processing and interpretation in a silicon chip which mimics the function of the deficient cerebellar circuit. The output from this biomimetic chip will then trigger the eyeblink response by way of implanted stimulation electrodes.nnComplete success would be achieved through real-time demonstration of functional recovery of the lost motor learning response in aged rats. Advances in any or all of the component technologies, their integration and clinical implementation, and improved understanding of the neuronal circuit would represent incomplete but valuable progress in the treatment of deficient neuronal systems.",
+  "grantUrl": "",
+  "grantId": "216809",
+  "fundValue": "3393119",
+  "fundStart": "2008-02-01",
+  "fundEnd": "2011-01-31",
+  "dataset": "fp7"
+}

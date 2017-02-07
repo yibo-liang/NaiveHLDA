@@ -41,14 +41,14 @@ public:
     string rawstr;
     int length;
 	string grant_type;
-	string grant_id;
+	string doc_id;
 	double fund_value;
 
     document() {
 	words = NULL;
 	rawstr = "";
 	length = 0;	
-	grant_id = "";
+	doc_id = "";
 	grant_type = "";
     }
     

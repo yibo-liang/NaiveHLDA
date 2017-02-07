@@ -1141,7 +1141,7 @@ void model::estimateSH(model * supermodel)
 	std::ostringstream strs;
 	strs << "" << this->K;
 	std::string str = strs.str();
-	save_model("K=" + str + "-" + utils::generate_model_name(-1));
+	//save_model("K=" + str + "-" + utils::generate_model_name(-1));
 
 	if (this->est_depth + 1 == this->hDepth) {
 		return;
@@ -1643,7 +1643,8 @@ json _save_to_json_hierarchical_nested(model * mod, model* top_mod) {
 
 				if (tweight < avr_weight) continue;
 				tmp["topicWeight"] = tweight;
-				tmp["docId"] = to_string(m);
+				tmp["docId"] = mod->ptrndata->docs[m]->doc_id;
+				tmp["docClass"] = mod->ptrndata->docs[m]->grant_type;
 				topic_doc_dist.push_back(tmp);
 			}
 

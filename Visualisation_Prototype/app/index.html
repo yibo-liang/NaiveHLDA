@@ -7,7 +7,7 @@
     <script src="lib/d3.js"></script>
     <script src="lib/d3.layout.cloud.js"></script>
     <script src="js/zoom.js"></script>
-    <script src="js/core_new.js"></script>
+    <script src="js/core.js"></script>
 </head>
 <body style="height: 100vh; width: 100vw; overflow: hidden; padding: 0; margin: 0">
 <div id="container" style="width: 100%; height: 100%; display: block">
@@ -17,8 +17,9 @@
     //render("#container", "data/top_level_hexmap.json", "data/simple_hierarchical_topic_model.json")
     var hexmap=new hierarchical_hexmap("#container");
     hexmap.init()
-        .load_hexmap_data("data/top_level_hexmap.json")
-        .load_topic_model("data/simple_hierarchical_topic_model.json")
+        .set_data_directory("data/experiment3/")
+        .load_hexmap_data("top_level_hexmap.json")
+        .load_topic_model("simple_hierarchical_topic_model.json")
         .enable_zooming()
 
 </script>

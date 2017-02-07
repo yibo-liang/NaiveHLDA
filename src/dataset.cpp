@@ -161,7 +161,7 @@ int dataset::read_trndata(string dfile, string wordmapfile) {
 		// allocate new document
 		int offset = 3;
 		document * pdoc = new document(length - offset);
-		pdoc->grant_id = grant_id;
+		pdoc->doc_id = grant_id;
 		pdoc->grant_type = grant_type;
 		pdoc->fund_value = stod(strtok.token(2));
 			
