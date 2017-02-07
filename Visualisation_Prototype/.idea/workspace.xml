@@ -38,11 +38,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="index3.html" pinned="false" current-in-tab="false">
+      <file leaf-file-name="index3.html" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/index3.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="304">
-              <caret line="19" column="45" lean-forward="false" selection-start-line="19" selection-start-column="45" selection-end-line="19" selection-end-column="45" />
+            <state relative-caret-position="160">
+              <caret line="10" column="7" lean-forward="true" selection-start-line="10" selection-start-column="7" selection-end-line="10" selection-end-column="7" />
               <folding />
             </state>
           </provider>
@@ -58,11 +58,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="core.js" pinned="false" current-in-tab="true">
+      <file leaf-file-name="core.js" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/js/core.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="581">
-              <caret line="914" column="43" lean-forward="true" selection-start-line="914" selection-start-column="43" selection-end-line="914" selection-end-column="43" />
+            <state relative-caret-position="213">
+              <caret line="891" column="78" lean-forward="true" selection-start-line="891" selection-start-column="78" selection-end-line="891" selection-end-column="78" />
               <folding>
                 <element signature="n#!!doc;n#hierarchical_hexmap#0" expanded="false" />
               </folding>
@@ -361,12 +361,12 @@
       <workItem from="1486059782209" duration="8029000" />
       <workItem from="1486131502907" duration="9440000" />
       <workItem from="1486147436670" duration="16152000" />
-      <workItem from="1486376625910" duration="21185000" />
+      <workItem from="1486376625910" duration="21757000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="209144000" />
+    <option name="totallyTimeSpent" value="209716000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1912" y="-8" width="1936" height="1056" extended-state="6" />
@@ -795,6 +795,16 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/app/js/core.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="213">
+          <caret line="891" column="78" lean-forward="true" selection-start-line="891" selection-start-column="78" selection-end-line="891" selection-end-column="78" />
+          <folding>
+            <element signature="n#!!doc;n#hierarchical_hexmap#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/index2.html">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="416">
@@ -805,19 +815,9 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/index3.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="304">
-          <caret line="19" column="45" lean-forward="false" selection-start-line="19" selection-start-column="45" selection-end-line="19" selection-end-column="45" />
+        <state relative-caret-position="160">
+          <caret line="10" column="7" lean-forward="true" selection-start-line="10" selection-start-column="7" selection-end-line="10" selection-end-column="7" />
           <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/js/core.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="581">
-          <caret line="914" column="43" lean-forward="true" selection-start-line="914" selection-start-column="43" selection-end-line="914" selection-end-column="43" />
-          <folding>
-            <element signature="n#!!doc;n#hierarchical_hexmap#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
