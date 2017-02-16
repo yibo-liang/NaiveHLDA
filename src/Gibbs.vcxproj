@@ -108,6 +108,9 @@
       <OpenMPSupport>false</OpenMPSupport>
       <AdditionalUsingDirectories>F:\PhD\LDA\GibbsLDA++-0.2\src\;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Full</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link />
   </ItemDefinitionGroup>
@@ -127,6 +130,7 @@
   <ItemGroup>
     <ClInclude Include="constants.h" />
     <ClInclude Include="dataset.h" />
+    <ClInclude Include="timer.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="model.h" />
     <ClInclude Include="strtokenizer.h" />

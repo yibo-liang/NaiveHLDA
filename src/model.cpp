@@ -29,6 +29,7 @@
   *   http://www.arbylon.net/publications/text-est.pdf
   */
 
+#include "timer.h"
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
@@ -1108,9 +1109,11 @@ void model::estimateSH(model * supermodel)
 	clock_t t1, t2;
 	t1 = clock();
 
+	Timer timer;
 	for (liter = last_iter + 1; liter <= niters + last_iter; liter++) {
+		timer.reset();
 		//printf("Iteration %d ...\n", liter);
-		cout << "\r Iteration:" << liter << " ";
+		//cout << "\r Iteration:" << liter << " ";
 		// for all z_i
 		for (int m = 0; m < M; m++) {
 			if (supermodel == this) {
@@ -1130,6 +1133,10 @@ void model::estimateSH(model * supermodel)
 			}
 
 		}
+
+		cout << "Iteration " << liter;
+		double t2 = timer.elapsed();
+		cout << ", elapsed" << t2 << "" << endl;
 	}
 	cout << endl;
 	printf("Gibbs sampling completed!\n");
