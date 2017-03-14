@@ -20,6 +20,7 @@ function hierarchical_hexmap(dom_container) {
         'rgba(147, 86, 53,0.3)',
         'rgba(85, 180, 176,0.3)'
     ];
+    _this.backend_server=null;
     _this.data_dir = null;
     _this.hexmap_data = null;
     _this.topic_data = null;
@@ -275,6 +276,11 @@ function hierarchical_hexmap(dom_container) {
 
     }
 
+    _this.set_backend = function(host){
+        _this.backend_server=host;
+        return _this;
+    }
+
     _this.set_data_directory = function (dir) {
         _this.data_dir = dir;
         return _this;
@@ -346,64 +352,173 @@ function hierarchical_hexmap(dom_container) {
 
         _this.panel_container = _this.container.append("div")
             .attr("class", "panel-container")
-            .style("position", "absolute")
             .style("left", _this.config.width + "px")
             .style("height", _this.config.height + "px")
-            .style("width", _this.config.panel_width + "px")
+            .style("width", _this.config.panel_width + "px");
 
-        var panel_wrap = _this.panel_container.append("div")
-            .style("position", "relative")
-            .style("height", "100%")
-            .style("width", "100%")
+        { //tab
 
-        //adding svg
-        _this.svg = _this.container.append("svg")
-            .attr("height", _this.config.height + "px")
-            .attr("width", _this.config.width + "px")
-            .attr("class", "hexmap")
-            .attr("id", "hex_svg")
+            var refresh=function(){
+                _this.tab_wrapper.selectAll("div")
+                    .data(_this.tab_defs)
+                    .classed("active", function(d){
+                        return d.active;
+                    })
+            }
 
-        //a group wrap for dragging and zooming
-        _this.view_wrap = _this.svg.append("g")
-            .attr("class", "view_wrap")
-            .style("transform", "translate("
-                + (_this.view.x * _this.view.zoom_scale + offsetx) + "px,"
-                + (_this.view.y * _this.view.zoom_scale + offsety) + "px)"
-                + " scale(" + _this.view.zoom_scale + "," + _this.view.zoom_scale + ")");
+            var show_overview = function () {
+                console.log("show overview")
+                _this.search_word_panel_wrap
+                    .style("display","none")
+                _this.default_panel_wrap
+                    .style("display","initial")
+                _this.tab_defs[0].active=true;
+                _this.tab_defs[1].active=false;
+                refresh();
+            }
 
-        //word cloud
+            var show_search_words = function () {
+                console.log("show search words")
+                _this.search_word_panel_wrap
+                    .style("display","initial")
+                _this.default_panel_wrap
+                    .style("display","none")
+                _this.tab_defs[0].active=false;
+                _this.tab_defs[1].active=true;
+                refresh()
+            }
 
-        _this.word_cloud_container = panel_wrap.append("div")
-            .style("height", "300px")
-            .style("width", "100%")
-            .append("svg")
-            .attr("height", "100%")
-            .attr("width", "100%")
-            .append("g");
+            _this.tab_defs = [
+                {text: "Overview", onclick: show_overview, active: true},
+                {text: "Search Words", onclick: show_search_words, active: false}
+            ]
+            _this.tab_wrapper = _this.panel_container.append("div")
+                .attr("class", "panel-tab-wrapper")
+            _this.tabs = _this.tab_wrapper.selectAll("div")
+                .data(_this.tab_defs)
+                .enter()
+                .append("div")
+                .attr("class", "panel-tab-button")
+                .text(function (d) {
+                    return d.text;
+                })
+                .on("click", function(d){
+
+                    d.onclick();
+                });
+            refresh()
+
+        }
 
 
-        //document list for topic doc distribution
-        _this.document_list_container = panel_wrap.append("div")
-            .attr("class", "document-list")
-            .style("width", _this.config.panel_width + "px")
-            .style("height", _this.config.height - _this.config.cloud_height + "px")
-            .style("visibility", "hidden")
+        _this.panel_wrapper = _this.panel_container
+            .append("div")
+            .attr("class", "panel-wrapper");
 
-        //table
-        var list_table = _this.document_list_container.append("table")
-            .attr("class", "doc_list")
+        {   //Main view
+            //adding svg
+            _this.svg = _this.container.append("svg")
+                .attr("height", _this.config.height + "px")
+                .attr("width", _this.config.width + "px")
+                .attr("class", "hexmap")
+                .attr("id", "hex_svg")
 
-        var head_row = list_table.append("thead").append("tr")
-        head_row.append("th")
-            .text("Grant ID")
-        head_row.append("th")
-            .text("Title")
-        head_row.append("th")
-            .text("Source")
-        head_row.append("th")
-            .text("Topic Relevance")
+            //a group wrap for dragging and zooming
+            _this.view_wrap = _this.svg.append("g")
+                .attr("class", "view_wrap")
+                .style("transform", "translate("
+                    + (_this.view.x * _this.view.zoom_scale + offsetx) + "px,"
+                    + (_this.view.y * _this.view.zoom_scale + offsety) + "px)"
+                    + " scale(" + _this.view.zoom_scale + "," + _this.view.zoom_scale + ")");
+        }
 
-        list_table.append("tbody");
+
+        {   //default panel
+            console.log("Loading Default Panel")
+            _this.default_panel_wrap = _this.panel_wrapper.append("div")
+                .style("position", "relative")
+                .style("height", "100%")
+                .style("width", "100%")
+
+            //word cloud
+
+            _this.word_cloud_container = _this.default_panel_wrap.append("div")
+                .style("height", "300px")
+                .style("width", "100%")
+                .append("svg")
+                .attr("height", "100%")
+                .attr("width", "100%")
+                .append("g");
+
+
+            //document list for topic doc distribution
+            _this.document_list_container = _this.default_panel_wrap.append("div")
+                .attr("class", "document-list")
+                .style("width", _this.config.panel_width + "px")
+                .style("height", "calc( 100% - " + _this.config.cloud_height + "px )")
+                .style("visibility", "hidden")
+
+
+            //table
+            var list_table = _this.document_list_container.append("table")
+                .attr("class", "doc_list")
+
+
+            var head_row = list_table.append("thead").append("tr")
+            head_row.append("th")
+                .text("Grant ID")
+            head_row.append("th")
+                .text("Title")
+            head_row.append("th")
+                .text("Source")
+            head_row.append("th")
+                .text("Topic Relevance")
+
+            list_table.append("tbody");
+
+        }
+
+        {   //search panel
+
+            var search_word=function(){
+                var keyword=document.getElementById("searchbox").value;
+                d3.json(_this.backend_server+"/search/"+keyword, function(data){
+                    console.log(data);
+                })
+            }
+
+            _this.search_word_panel_wrap = _this.panel_wrapper.append("div")
+                .classed("search-word-panel-wrapper",true)
+                .style("position", "relative")
+                .style("height", "100%")
+                .style("width", "100%")
+
+            var searchbox_wrapper=_this.search_word_panel_wrap.append("div")
+                .classed("searchbox-wrapper",true);
+
+            var search_box=searchbox_wrapper.append("input")
+                .attr("type","text")
+                .attr("place-holder","Any topic word here")
+                .classed("search-box", true)
+                .attr("id", "searchbox");
+
+            searchbox_wrapper.append("button")
+                .text("Search")
+                .classed("search-button", true)
+                .on("click",function(){
+                    search_word();
+                });
+
+
+
+            var search_result_container=_this.search_word_panel_wrap.append("div")
+                .classed("search-result-container", true);
+
+
+
+
+
+        }
 
         function drag_start() {
             _this.view.dragging = true;
