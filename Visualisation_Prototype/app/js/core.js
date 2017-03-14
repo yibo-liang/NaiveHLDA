@@ -20,7 +20,7 @@ function hierarchical_hexmap(dom_container) {
         'rgba(147, 86, 53,0.3)',
         'rgba(85, 180, 176,0.3)'
     ];
-    _this.backend_server=null;
+    _this.backend_server = null;
     _this.data_dir = null;
     _this.hexmap_data = null;
     _this.topic_data = null;
@@ -52,7 +52,7 @@ function hierarchical_hexmap(dom_container) {
         panel_width: null,
         cloud_height: 300,
     }
-
+    _this.topic_search = false;
 
     _this.view = {
         selected_hex: null,
@@ -276,8 +276,8 @@ function hierarchical_hexmap(dom_container) {
 
     }
 
-    _this.set_backend = function(host){
-        _this.backend_server=host;
+    _this.set_backend = function (host) {
+        _this.backend_server = host;
         return _this;
     }
 
@@ -358,10 +358,10 @@ function hierarchical_hexmap(dom_container) {
 
         { //tab
 
-            var refresh=function(){
+            var refresh = function () {
                 _this.tab_wrapper.selectAll("div")
                     .data(_this.tab_defs)
-                    .classed("active", function(d){
+                    .classed("active", function (d) {
                         return d.active;
                     })
             }
@@ -369,23 +369,27 @@ function hierarchical_hexmap(dom_container) {
             var show_overview = function () {
                 console.log("show overview")
                 _this.search_word_panel_wrap
-                    .style("display","none")
+                    .style("display", "none")
                 _this.default_panel_wrap
-                    .style("display","initial")
-                _this.tab_defs[0].active=true;
-                _this.tab_defs[1].active=false;
+                    .style("display", "initial")
+                _this.tab_defs[0].active = true;
+                _this.tab_defs[1].active = false;
+                _this.topic_search = false;
                 refresh();
+                _this.render();
             }
 
             var show_search_words = function () {
                 console.log("show search words")
                 _this.search_word_panel_wrap
-                    .style("display","initial")
+                    .style("display", "initial")
                 _this.default_panel_wrap
-                    .style("display","none")
-                _this.tab_defs[0].active=false;
-                _this.tab_defs[1].active=true;
-                refresh()
+                    .style("display", "none")
+                _this.tab_defs[0].active = false;
+                _this.tab_defs[1].active = true;
+                _this.topic_search = true;
+                refresh();
+                _this.render();
             }
 
             _this.tab_defs = [
@@ -402,7 +406,7 @@ function hierarchical_hexmap(dom_container) {
                 .text(function (d) {
                     return d.text;
                 })
-                .on("click", function(d){
+                .on("click", function (d) {
 
                     d.onclick();
                 });
@@ -480,42 +484,38 @@ function hierarchical_hexmap(dom_container) {
 
         {   //search panel
 
-            var search_word=function(){
-                var keyword=document.getElementById("searchbox").value;
-                d3.json(_this.backend_server+"/search/"+keyword, function(data){
+            var search_word = function () {
+                var keyword = document.getElementById("searchbox").value;
+                d3.json(_this.backend_server + "/search/" + keyword, function (data) {
                     console.log(data);
                 })
             }
 
             _this.search_word_panel_wrap = _this.panel_wrapper.append("div")
-                .classed("search-word-panel-wrapper",true)
+                .classed("search-word-panel-wrapper", true)
                 .style("position", "relative")
                 .style("height", "100%")
                 .style("width", "100%")
 
-            var searchbox_wrapper=_this.search_word_panel_wrap.append("div")
-                .classed("searchbox-wrapper",true);
+            var searchbox_wrapper = _this.search_word_panel_wrap.append("div")
+                .classed("searchbox-wrapper", true);
 
-            var search_box=searchbox_wrapper.append("input")
-                .attr("type","text")
-                .attr("place-holder","Any topic word here")
+            var search_box = searchbox_wrapper.append("input")
+                .attr("type", "text")
+                .attr("place-holder", "Any topic word here")
                 .classed("search-box", true)
                 .attr("id", "searchbox");
 
             searchbox_wrapper.append("button")
                 .text("Search")
                 .classed("search-button", true)
-                .on("click",function(){
+                .on("click", function () {
                     search_word();
                 });
 
 
-
-            var search_result_container=_this.search_word_panel_wrap.append("div")
+            var search_result_container = _this.search_word_panel_wrap.append("div")
                 .classed("search-result-container", true);
-
-
-
 
 
         }
@@ -789,6 +789,9 @@ function hierarchical_hexmap(dom_container) {
             .style("fill", function (d, i) {
                 return colors[d.data.classID];
             })
+            .style("display", function () {
+                return _this.topic_search ? "none" : "initial";
+            })
     }
 
     var zoom_fade = function (node_data) {
@@ -1048,6 +1051,14 @@ function hierarchical_hexmap(dom_container) {
         console.log("documents", _this.documents)
     }
 
+    var switch_pie_display = function (container, node_data, d, i) {
+        container.selectAll(".arc").style("display",
+            function () {
+                return _this.topic_search ? "none" : "initial";
+            })
+
+    }
+
     var draw_topic = function (container, node_data, d, i) {
 
 
@@ -1228,6 +1239,12 @@ function hierarchical_hexmap(dom_container) {
             .transition()
             .duration(500)
             .style("opacity", 1)
+
+        //update
+        selection.selectAll("g")
+            .each(function (d, i) {
+                switch_pie_display(d3.select(this), node_data, d, d.pos)
+            })
 
 
         // //update on click select
