@@ -118,11 +118,11 @@ div.searchbox-wrapper {
 
 input.search-box {
     height: 45px;
-    width: calc(100% - 110px);
+    width: calc(100% - 120px);
     margin: 0;
     border-width: 0;
     vertical-align: top;
-    padding: 5px;
+    padding: 5px 10px 5px 10px;
     font-size: 21px;
 }
 
@@ -138,7 +138,57 @@ button.search-button {
 }
 
 div.search-result-container{
-    height: calc(100% - 55px);
+    height: calc(100% - 110px);
     width: 100%;
+    overflow-y: auto;
+    border-bottom: solid 1px rgba(0,0,0,0.1);
+}
 
+div.result{
+    display: block;
+    padding: 10px;
+    font-size: 18px;
+    font-family: Arial;
+    margin: 5px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(0,0,0,0.1);
+}
+
+label.result-text{
+    font: inherit;
+    cursor: pointer;
+}
+
+label.result-text:hover {
+    color: rgba(0, 0, 0, 0.8);
+    text-decoration: underline;
+}
+
+div.select-all{
+    padding: 10px;
+    display: inline-block;
+    font-size: 18px;
+    font-family: Arial;
+    margin: 5px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(0,0,0,0.1);
+}
+
+div.show-selected{
+    padding: 10px;
+    display: inline-block;
+    font-size: 18px;
+    font-family: Arial;
+    margin: 5px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(0,0,0,0.1);
+    background-color: rgba(222,222,226,0.9);
+    cursor: pointer;
+}
+
+div.show-selected:hover{
+    background-color: rgba(222,222,244,0.9);
 }

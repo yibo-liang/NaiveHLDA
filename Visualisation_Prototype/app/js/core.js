@@ -235,7 +235,25 @@ function hierarchical_hexmap(dom_container) {
             //delete data.parent;
         }
 
+        //recursively get maximum value on each level
+        _this.topic_value_maximums = [];
+        function recursiveValue(node, depth) {
+            console.log(depth, node)
+            for (var i in node.data.topicClassesDistrib) {
+                var d = node.data.topicClassesDistrib[i];
+                var sum = d[0].weightedValueSum + d[1].weightedValueSum;
+                if (!_this.topic_value_maximums[depth] || sum > _this.topic_value_maximums[depth]) {
+                    _this.topic_value_maximums[depth] = sum;
+                }
+            }
+            if (node.children)
+                for (var i = 0; i < node.children.length; i++) {
+                    recursiveValue(node.children[i], depth + 1);
+                }
+        }
+
         if (_this.hexmap_data && _this.topic_data) {
+
             _this.topic_data.data.hexagons = [];
             for (var i = 0; i < _this.topic_data.children.length; i++) {
                 var hex_coor = _this.hexmap_data["hexmapData"][i].hexAggloCoord;
@@ -264,6 +282,7 @@ function hierarchical_hexmap(dom_container) {
             delete _this.topic_data.data.submodels;
             addImmediateNeighboursAndBorders(_this.topic_data.data.hexagons)
 
+            recursiveValue(_this.topic_data, 0);
             _this.boundary_box = boundary_box;
             if (_this.render_on_load) {
                 enter_render(_this.topic_data, _this.view_wrap);
@@ -278,6 +297,7 @@ function hierarchical_hexmap(dom_container) {
 
     _this.set_backend = function (host) {
         _this.backend_server = host;
+        console.log(_this.backend_server)
         return _this;
     }
 
@@ -483,13 +503,111 @@ function hierarchical_hexmap(dom_container) {
         }
 
         {   //search panel
+            var query_words = function () {
+                var query_string = "";
+                var count = 0;
+                var len = _this.search_word_result.length;
+                for (var i = 0; i < len; i++) {
+                    if (_this.search_word_result[i].selected) {
+                        if (count > 0)
+                            query_string += "+";
+                        query_string += _this.search_word_result[i].word;
+                        count++;
+                    }
+
+                }
+
+                d3.json(_this.backend_server + "/topic_word_count/" + query_string, function (data) {
+                    //the data is in tree structure, merge it with current data,and display
+
+                    _this.query_result_maximums = [];
+                    function recursiveMerge(topic_data_node, search_data, depth) {
+
+                        topic_data_node.data.query_result = search_data.topic_word_sum;
+
+                        for (i in search_data.topic_word_sum) {
+                            var value = search_data.topic_word_sum[i];
+                            if (!_this.query_result_maximums[depth] || value > _this.query_result_maximums[depth]) {
+                                _this.query_result_maximums[depth] = value;
+                            }
+                        }
+                        if (topic_data_node.children)
+                            for (var i = 0; i < topic_data_node.children.length; i++) {
+                                recursiveMerge(topic_data_node.children[i], search_data.submodels[i], depth + 1);
+                            }
+                    }
+
+                    recursiveMerge(_this.topic_data, data, 0);
+                    _this.render();
+                })
+            }
+
+            var update_selection = function () {
+                var search_result_container = _this.search_word_panel_wrap
+                    .select("div.search-result-container");
+                search_result_container.selectAll(".result")
+                    .data(_this.search_word_result)
+                    .each(function (d, i) {
+                        d3.select(this).select("input").property('checked', d.selected);
+                    })
+                query_words();
+            }
+
+            var show_search_results = function () {
+                var search_result_container = _this.search_word_panel_wrap
+                    .select("div.search-result-container");
+                //enter
+                console.log("search result", search_result_container, _this.search_word_result)
+                var enter = search_result_container.selectAll(".result")
+                    .data(_this.search_word_result)
+                    .enter()
+
+                var item = enter.append("div")
+                    .attr("class", "result");
+
+                item.append("input")
+                    .attr("type", "checkbox")
+                    .attr("id", function (d, i) {
+                        return "result_" + i;
+                    })
+                    .on("click", function (d) {
+                        d.selected = !d.selected;
+                        query_words();
+                    });
+                item.append("label")
+                    .attr("class", "result-text")
+                    .attr("for", function (d, i) {
+                        return "result_" + i;
+                    })
+                    .text(function (d) {
+                        return d.word;
+                    })
+
+
+                search_result_container.selectAll(".result")
+                    .data(_this.search_word_result)
+                    .exit()
+                    .remove();
+
+            }
 
             var search_word = function () {
                 var keyword = document.getElementById("searchbox").value;
                 d3.json(_this.backend_server + "/search/" + keyword, function (data) {
                     console.log(data);
+                    _this.search_word_result = [];
+                    var search_result = [];
+                    show_search_results();
+                    if (data.result) {
+                        for (var i = 0; i < data.result.length; i++) {
+                            search_result.push({word: data.result[i], selected: false});
+                        }
+                    }
+                    _this.search_word_result = search_result;
+                    show_search_results();
                 })
             }
+
 
             _this.search_word_panel_wrap = _this.panel_wrapper.append("div")
                 .classed("search-word-panel-wrapper", true)
@@ -502,7 +620,7 @@ function hierarchical_hexmap(dom_container) {
 
             var search_box = searchbox_wrapper.append("input")
                 .attr("type", "text")
-                .attr("place-holder", "Any topic word here")
+                .attr("placeholder", "Any topic word here ...")
                 .classed("search-box", true)
                 .attr("id", "searchbox");
 
@@ -517,6 +635,28 @@ function hierarchical_hexmap(dom_container) {
             var search_result_container = _this.search_word_panel_wrap.append("div")
                 .classed("search-result-container", true);
 
+            var search_control_wrapper = _this.search_word_panel_wrap.append("div")
+                .classed("search-control-container", true);
+
+            var select_all = search_control_wrapper.append("div")
+                .attr("class", "select-all")
+
+
+            select_all.append("input")
+                .attr("type", "checkbox")
+                .attr("id", "select_all")
+                .on("click", function (d) {
+                    var selection = d3.select(this).property('checked');
+                    for (var i = 0; i < _this.search_word_result.length; i++) {
+                        _this.search_word_result[i].selected = selection;
+                    }
+
+                    update_selection();
+                });
+            select_all.append("label")
+                .attr("class", "result-text")
+                .attr("for", "select_all")
+                .text("select all")
 
         }
 
@@ -729,7 +869,7 @@ function hierarchical_hexmap(dom_container) {
     }
 
 
-    function draw_pie_in_group(group, pie_data, sibling_models) {
+    function draw_pie_in_group(group, pie_data, sibling_models, depth) {
         function get_value_range(model) {
 
             var get_sum = function (d) {
@@ -748,10 +888,13 @@ function hierarchical_hexmap(dom_container) {
                 arr.push(get_sum(model[key]));
             }
 
+            var max = _this.topic_value_maximums[depth];
+
+
             //console.log("getsum", arr)
             return {
                 min: Math.min.apply(Math, arr),
-                max: Math.max.apply(Math, arr),
+                max: Math.max(Math.max.apply(Math, arr), max),
             }
         }
 
@@ -766,16 +909,18 @@ function hierarchical_hexmap(dom_container) {
             })(pie_data)
         var range = get_value_range(sibling_models);
 
-        var min_radius_percentage = 1 / 5;
+        // var min_radius_percentage = 1 / 5;
+        //
+        // var radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
+        // //console.log(radius, range)
+        // radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
+        var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
+        var k = ((sum - range.min) / (range.max - range.min));
+        var r = Math.sqrt(k * max_radius * max_radius);
 
-        var radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
-        //console.log(radius, range)
-        radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
-
-        //console.log("r2", radius)
 
         var arc = d3.arc()
-            .outerRadius(radius)
+            .outerRadius(r)
             .innerRadius(0)
 
         var pie_g = group.selectAll(".arc")
@@ -792,6 +937,58 @@ function hierarchical_hexmap(dom_container) {
             .style("display", function () {
                 return _this.topic_search ? "none" : "initial";
             })
+    }
+
+    function draw_query_distribution(group, idx, sibling_data, depth) {
+
+        function get_value_range(sibling_data) {
+            var arr = [];
+            for (var i in sibling_data) {
+                arr.push(sibling_data[i]);
+            }
+
+            var max = _this.query_result_maximums[depth];
+
+            return {
+                min: Math.min(Math.min.apply(Math, arr), 0.0001),
+                max: Math.max(Math.max.apply(Math, arr), max),
+            }
+        }
+
+        var r;
+        if (!sibling_data) {
+            r = 0;
+        } else {
+            var query_data_item = sibling_data[idx];
+            var range = get_value_range(sibling_data);
+            var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
+            var k = ((query_data_item - range.min) / (range.max - range.min));
+            r = Math.sqrt(k * max_radius * max_radius);
+
+        }
+        var d = [{idx: idx, r: r}];
+        var dummy_selection = group.selectAll(".query-circle")
+            .data(d, function (d) {
+                return d.idx;
+            });
+        dummy_selection.enter()
+            .append("circle")
+            .attr("class", "query-circle")
+            .attr("r", 0)
+            .attr("stroke", "none")
+            .attr("fill", "rgba(90,0,30,0.2)");
+
+        group.selectAll(".query-circle")
+            .transition()
+            .attr("r", function (d) {
+                return isNaN(d.r) ? 0 : d.r;
+            })
+            .style("display",
+                function () {
+                    return !_this.topic_search ? "none" : "initial";
+                })
+
+
     }
 
     var zoom_fade = function (node_data) {
@@ -1007,7 +1204,7 @@ function hierarchical_hexmap(dom_container) {
             for (var i = 0; i < distribution.length; i++) {
                 var path = "data/grants/" + dir_dict[distribution[i].docClass] + distribution[i].docId + ".json";
                 var key = distribution[i].docClass + "-" + distribution[i].docId;
-                console.log(!_this.documents[key], _this.documents[key], path)
+                //console.log(!_this.documents[key], _this.documents[key], path)
                 if (!_this.documents[key]) {
 
                     function load(doc_key, doc_num) {
@@ -1015,7 +1212,7 @@ function hierarchical_hexmap(dom_container) {
 
 
                             _this.documents[doc_key] = data;
-                            console.log(_this.documents)
+                            //console.log(_this.documents)
                             callback(doc_num);
                         })
                     }
@@ -1056,6 +1253,10 @@ function hierarchical_hexmap(dom_container) {
             function () {
                 return _this.topic_search ? "none" : "initial";
             })
+        container.selectAll(".query-circle").style("display",
+            function () {
+                return !_this.topic_search ? "none" : "initial";
+            })
 
     }
 
@@ -1080,9 +1281,8 @@ function hierarchical_hexmap(dom_container) {
             var data_group = container.append("g")
                 .attr("class", "data")
                 .style("opacity", 0)
-
-            draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib);
-
+            draw_query_distribution(data_group, i, node_data.data.query_result, node_data.depth);
+            draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
 
             //draw texts
             var texts = node_data.data.topics[i];
@@ -1133,7 +1333,7 @@ function hierarchical_hexmap(dom_container) {
                 })
                 .on("click", function () {
                     show_cloud(node_data.data.topics[i]);
-
+                    console.log(node_data.data)
                     _this.view.selected_hex = {
                         data: node_data,
                         hex: d
@@ -1202,7 +1402,6 @@ function hierarchical_hexmap(dom_container) {
 
     var update_render = function (node_data, super_wrapper_group) {
 
-
         var node_data_children = node_data.children;
 
         var scale = node_data.depth > 0 ? 1 / 3 : 1; //scale for sub level
@@ -1244,8 +1443,14 @@ function hierarchical_hexmap(dom_container) {
         selection.selectAll("g")
             .each(function (d, i) {
                 switch_pie_display(d3.select(this), node_data, d, d.pos)
+
             })
 
+
+        selection.selectAll("g.data")
+            .each(function (d, i) {
+                draw_query_distribution(d3.select(this), d.pos, node_data.data.query_result, node_data.depth);
+            })
 
         // //update on click select
         selection.select("polygon")
