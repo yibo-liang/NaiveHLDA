@@ -17,7 +17,7 @@
     //render("#container", "data/top_level_hexmap.json", "data/simple_hierarchical_topic_model.json")
     var hexmap=new hierarchical_hexmap("#container");
     hexmap.init()
-        .set_backend("http://localhost:8081")
+        .set_backend("http://82.1.240.86:8081")
         .set_data_directory("data/experiment6/")
         .load_hexmap_data("top_level_hexmap.json")
         .load_topic_model("simple_hierarchical_topic_model.json")
