@@ -238,7 +238,7 @@ function hierarchical_hexmap(dom_container) {
         //recursively get maximum value on each level
         _this.topic_value_maximums = [];
         function recursiveValue(node, depth) {
-            console.log(depth, node)
+            //console.log(depth, node)
             for (var i in node.data.topicClassesDistrib) {
                 var d = node.data.topicClassesDistrib[i];
                 var sum = d[0].weightedValueSum + d[1].weightedValueSum;
@@ -692,7 +692,7 @@ function hierarchical_hexmap(dom_container) {
             if (_this.view.dragging) {
                 _this.render();
             }
-            console.log(_this.view.x, _this.view.y)
+            //console.log(_this.view.x, _this.view.y)
             _this.view.dragging = false;
         }
 
@@ -884,18 +884,19 @@ function hierarchical_hexmap(dom_container) {
             }
             var arr = []
 
-            for (key in model) {
-                arr.push(get_sum(model[key]));
+            for (var key in model) {
+                var s = get_sum(model[key]);
+                arr.push(s);
+                console.log(key + ", sum=" + s)
             }
-
             var max = _this.topic_value_maximums[depth];
 
-
-            //console.log("getsum", arr)
-            return {
+            var result = {
                 min: Math.min.apply(Math, arr),
                 max: Math.max(Math.max.apply(Math, arr), max),
             }
+            console.log("value range result =", result)
+            return result;
         }
 
         // require [{name: eu, val: num, proj: num},...]
@@ -905,7 +906,8 @@ function hierarchical_hexmap(dom_container) {
 
         var pie = d3.pie()
             .value(function (d) {
-                return d.weightSum;
+                console.log("d weight sum ", d.weightedValueSum)
+                return parseFloat(d.weightedValueSum);
             })(pie_data)
         var range = get_value_range(sibling_models);
 
@@ -914,23 +916,28 @@ function hierarchical_hexmap(dom_container) {
         // var radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
         // //console.log(radius, range)
         // radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
-        var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
+        var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2 - 10;
         var k = ((sum - range.min) / (range.max - range.min));
-        var r = Math.sqrt(k * max_radius * max_radius);
+        console.log("k = " + (sum) + "/" + (range.max) + "=" + k)
+        var r = Math.sqrt(k * max_radius * max_radius)+ 10;
 
 
         var arc = d3.arc()
             .outerRadius(r)
             .innerRadius(0)
-
+        console.log("r=" + r)
         var pie_g = group.selectAll(".arc")
             .data(pie)
             .enter()
-
+        console.log(pie)
         pie_g.insert("path", ":first-child")
             .style("opacity", "0.3")
             .attr("class", "arc")
-            .attr("d", arc)
+            .attr("d", function (d, i) {
+                var res = arc(d, i);
+                console.log("d=" + res);
+                return res;
+            })
             .style("fill", function (d, i) {
                 return colors[d.data.classID];
             })
@@ -1245,7 +1252,7 @@ function hierarchical_hexmap(dom_container) {
         }
 
 
-        console.log("documents", _this.documents)
+        //console.log("documents", _this.documents)
     }
 
     var switch_pie_display = function (container, node_data, d, i) {
@@ -1282,6 +1289,7 @@ function hierarchical_hexmap(dom_container) {
                 .attr("class", "data")
                 .style("opacity", 0)
             draw_query_distribution(data_group, i, node_data.data.query_result, node_data.depth);
+            console.log("draw pi i=", i)
             draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
 
             //draw texts
@@ -1333,13 +1341,13 @@ function hierarchical_hexmap(dom_container) {
                 })
                 .on("click", function () {
                     show_cloud(node_data.data.topics[i]);
-                    console.log(node_data.data)
+                    //console.log(node_data.data)
                     _this.view.selected_hex = {
                         data: node_data,
                         hex: d
                     }
 
-                    console.log(_this.boundary_box, d)
+                    console.log(node_data.data.topicClassesDistrib[i], i)
                     display_file_list(node_data, i);
                     _this.render();
                 })
