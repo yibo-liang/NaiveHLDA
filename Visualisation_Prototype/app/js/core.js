@@ -255,7 +255,17 @@ function hierarchical_hexmap(dom_container) {
         if (_this.hexmap_data && _this.topic_data) {
 
             _this.topic_data.data.hexagons = [];
-            for (var i = 0; i < _this.topic_data.children.length; i++) {
+            if (!_this.topic_data.children) {
+                _this.topic_data.children = [];
+            }
+
+            var topic_count = 0;
+            for (var key in _this.topic_data.data.topics) {
+                console.log(key)
+                topic_count++;
+            }
+
+            for (var i = 0; i < topic_count; i++) {
                 var hex_coor = _this.hexmap_data["hexmapData"][i].hexAggloCoord;
 
                 var x = hex_coor.x * _this.config.hexagon_scale;
@@ -271,13 +281,14 @@ function hierarchical_hexmap(dom_container) {
                 }
                 //update boundary box value
                 var d = _this.topic_data.data.hexagons[i];
+                console.log("hex:", d)
                 if (d.absolute_x > boundary_box.max_x) boundary_box.max_x = d.absolute_x;
                 if (d.absolute_y > boundary_box.max_y) boundary_box.max_y = d.absolute_y;
                 if (d.absolute_x < boundary_box.min_x) boundary_box.min_x = d.absolute_x;
                 if (d.absolute_y < boundary_box.min_y) boundary_box.min_y = d.absolute_y;
 
-
-                set_all_position(_this.topic_data.children[i], _this.topic_data.data.hexagons[i]);
+                if (_this.topic_data.children.length > 0)
+                    set_all_position(_this.topic_data.children[i], _this.topic_data.data.hexagons[i]);
             }
             delete _this.topic_data.data.submodels;
             addImmediateNeighboursAndBorders(_this.topic_data.data.hexagons)
@@ -1135,22 +1146,29 @@ function hierarchical_hexmap(dom_container) {
             var distribution = _this.topic_doc_distribution[suffix];
             //console.log("distr", distribution)
             var source_dict = {
-                "UK": "gtr",
-                "EU-fp7": "fp7",
-                "EU-h": "h2020"
+                "UK": "GTR",
+                "EU-fp7": "FP7",
+                "EU-h": "H2020",
+                "US": "NSF",
+                "CN": "NSFC"
             }
 
             var display = [];
             for (var i = 0; i < distribution.length; i++) {
                 var key = distribution[i].docClass + "-" + distribution[i].docId;
                 if (typeof _this.documents[key] !== "undefined" || _this.documents[key]) {
+                    if (distribution[i].docClass=="US") {
 
-                    display.push({
-                        grant_id: _this.documents[key].grantId,
-                        title: _this.documents[key].title,
-                        source: _this.documents[key].dataset,
-                        relevance: distribution[i].topicWeight * 100
-                    });
+                    }else if  (distribution[i].docClass=="CN") {
+
+                    }else{
+                        display.push({
+                            grant_id: _this.documents[key].grantId,
+                            title: _this.documents[key].title,
+                            source: source_dict[distribution[i].docClass],
+                            relevance: distribution[i].topicWeight * 100
+                        });
+                    }
                 }
 
             }
@@ -1198,7 +1216,9 @@ function hierarchical_hexmap(dom_container) {
             var dir_dict = {
                 "UK": "uk/",
                 "EU-fp7": "eu-fp7/fp7_",
-                "EU-h": "eu-h/h2020_"
+                "EU-h": "eu-h/h2020_",
+                "US":"us/",
+                "CN":"cn/"
             }
 
             for (var i = 0; i < distribution.length; i++) {
