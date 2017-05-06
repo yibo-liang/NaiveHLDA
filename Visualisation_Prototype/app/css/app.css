@@ -131,20 +131,20 @@ button.search-button {
     width: 100px;
     font-size: 21px;
     padding: 17px;
-    background-color: rgba(222,222,226,0.9);
+    background-color: rgba(222, 222, 226, 0.9);
     border-width: 0;
     margin: 0;
     vertical-align: top;
 }
 
-div.search-result-container{
+div.search-result-container {
     height: calc(100% - 110px);
     width: 100%;
     overflow-y: auto;
-    border-bottom: solid 1px rgba(0,0,0,0.1);
+    border-bottom: solid 1px rgba(0, 0, 0, 0.1);
 }
 
-div.result{
+div.result {
     display: block;
     padding: 10px;
     font-size: 18px;
@@ -152,10 +152,10 @@ div.result{
     margin: 5px;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(0,0,0,0.1);
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
-label.result-text{
+label.result-text {
     font: inherit;
     cursor: pointer;
 }
@@ -165,7 +165,7 @@ label.result-text:hover {
     text-decoration: underline;
 }
 
-div.select-all{
+div.select-all {
     padding: 10px;
     display: inline-block;
     font-size: 18px;
@@ -173,10 +173,10 @@ div.select-all{
     margin: 5px;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(0,0,0,0.1);
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
-div.show-selected{
+div.show-selected {
     padding: 10px;
     display: inline-block;
     font-size: 18px;
@@ -184,11 +184,49 @@ div.show-selected{
     margin: 5px;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(0,0,0,0.1);
-    background-color: rgba(222,222,226,0.9);
+    border-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(222, 222, 226, 0.9);
     cursor: pointer;
 }
 
-div.show-selected:hover{
-    background-color: rgba(222,222,244,0.9);
+div.show-selected:hover {
+    background-color: rgba(222, 222, 244, 0.9);
+}
+
+div.checkbox-container {
+    left: 30px;
+    bottom: 200px;
+    position: absolute;
+    height: 150px;
+    width: 200px;
+    padding: 15px 15px 15px 0;
+    background-color: rgba(255, 255, 255, 0.3);
+    display: block;
+}
+
+div.pie-checkbox {
+    margin: 8px;
+    border-width: 0 0 0 20px;
+    border-style: solid;
+}
+
+div.pie-checkbox-text {
+    -webkit-transform: translate(-15px, 0);
+    -moz-transform: translate(-15px, 0);
+    -ms-transform: translate(-15px, 0);
+    -o-transform: translate(-15px, 0);
+    transform: translate(-15px, 0);
+    display: inline-block;
+    cursor: pointer;
+
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently */
+}
+
+div.pie-checkbox-text:hover{
+    color: darkgray;
 }

@@ -6,6 +6,7 @@
 function hierarchical_hexmap(dom_container) {
 
     var _this = this;
+    var colors = {EU: "#5B5EA6", UK: "#D65076", US: "#05A0FF", CN: "#FF0505"};
 
 
     _this.groupColors = [
@@ -51,7 +52,7 @@ function hierarchical_hexmap(dom_container) {
         cluster_border_width: 1.5,
         panel_width: null,
         cloud_height: 300,
-    }
+    };
     _this.topic_search = false;
 
     _this.view = {
@@ -76,28 +77,55 @@ function hierarchical_hexmap(dom_container) {
         },
         dragging: false,
         x: 0,
-        y: 0
-    }
+        y: 0,
+        pie_selection: [
+            {name: "US", value: true},
+            {name: "UK", value: true},
+            {name: "EU", value: true},
+            {name: "CN", value: true}
+        ],
+        pie_select_change: function (name, value) {
+            for (var i = 0; i < _this.view.pie_selection.length; i++) {
+                if (_this.view.pie_selection[i].name == name) {
+                    _this.view.pie_selection[i].value = value;
+                    break;
+                }
+            }
+            //console.log(_this.view.pie_selection)
+        },
+        pie_selected: function (t) {
+            var result = false;
+            for (var i = 0; i < _this.view.pie_selection.length; i++) {
+                //console.log(_this.view.pie_selection[i], i)
+                if (_this.view.pie_selection[i].name == t) {
+                    result = _this.view.pie_selection[i].value;
+                    break;
+                }
+            }
+            //console.log(t, "resul = ", result)
+            return result;
+        }
+    };
 
     _this.colors = {
         background: "rgba(255,255,255,0.95)",
         selected: "rgba(244,244,244,1)",
         border: "rgba(233,233,233, 1)",
         cluster_border: "rgba(88,88,88,1)"
-    }
+    };
 
     //helper function
     var zoom_depth = function () {
         var k = Math.log(_this.view.zoom_scale) / Math.log(_this.view.zoom_base);
         return Math.ceil((k + 1) / 2) - 1;
-    }
+    };
 
     var padding_shrink = function (node_data) {
         return (_this.config.hexagon_scale -
             (node_data.depth == 0 ? _this.config.cluster_border_width / 2 : 0.5))
             / _this.config.hexagon_scale;
 
-    }
+    };
 
 
     var zoom_to_depth = function (depth, dx, dy) {
@@ -112,6 +140,29 @@ function hierarchical_hexmap(dom_container) {
         _this.view.y = -dy;
         drag_graph(_this.view_wrap, true);
         _this.render();
+    };
+
+    _this.topic_value_maximums = [];
+    var recursiveTopicMaxValue = function (node, depth) {
+        console.log("node.data.topicClassesDistrib=", node.data.topicClassesDistrib)
+        for (var i in node.data.topicClassesDistrib) {
+            var d = node.data.topicClassesDistrib[i];
+            var sum = 0;
+            console.log(i)
+            for (var ci = 0; ci < d.length; ci++) {
+                console.log("d[ci].classID=", d[ci].classID, d[ci].weightedValueSum, ci)
+                sum += d[ci].weightedValueSum * (_this.view.pie_selected(d[ci].classID) ? 1 : 0);
+            }
+            console.log(sum, depth)
+            if (!_this.topic_value_maximums[depth] || sum > _this.topic_value_maximums[depth]) {
+                _this.topic_value_maximums[depth] = sum;
+
+            }
+        }
+        if (node.children)
+            for (var i = 0; i < node.children.length; i++) {
+                recursiveTopicMaxValue(node.children[i], depth + 1);
+            }
     }
 
     var prepare_data = function () {
@@ -122,7 +173,7 @@ function hierarchical_hexmap(dom_container) {
             min_y: 9999,
             max_x: -9999,
             max_y: -9999
-        }
+        };
 
         function determineRr(hexagons) {
             //Determines hexagon radius 'r' from min distance of neighbours
@@ -198,7 +249,7 @@ function hierarchical_hexmap(dom_container) {
                     absolute_x: parent_coor.absolute_x + x * Math.pow(1 / 3, data.depth - 1),
                     absolute_y: parent_coor.absolute_y + y * Math.pow(1 / 3, data.depth - 1),
                     pos: i
-                }
+                };
 
                 //update boundary box
                 var d = data.data.hexagons[i];
@@ -216,7 +267,7 @@ function hierarchical_hexmap(dom_container) {
                 absolute_y: parent_coor.absolute_y,
                 pos: 6
 
-            }
+            };
             //data.children[6].words = data.data.topics[6];
             //delete data.data.topics;
 
@@ -236,21 +287,7 @@ function hierarchical_hexmap(dom_container) {
         }
 
         //recursively get maximum value on each level
-        _this.topic_value_maximums = [];
-        function recursiveValue(node, depth) {
-            //console.log(depth, node)
-            for (var i in node.data.topicClassesDistrib) {
-                var d = node.data.topicClassesDistrib[i];
-                var sum = d[0].weightedValueSum + d[1].weightedValueSum;
-                if (!_this.topic_value_maximums[depth] || sum > _this.topic_value_maximums[depth]) {
-                    _this.topic_value_maximums[depth] = sum;
-                }
-            }
-            if (node.children)
-                for (var i = 0; i < node.children.length; i++) {
-                    recursiveValue(node.children[i], depth + 1);
-                }
-        }
+
 
         if (_this.hexmap_data && _this.topic_data) {
 
@@ -261,7 +298,7 @@ function hierarchical_hexmap(dom_container) {
 
             var topic_count = 0;
             for (var key in _this.topic_data.data.topics) {
-                console.log(key)
+                //console.log(key);
                 topic_count++;
             }
 
@@ -278,10 +315,10 @@ function hierarchical_hexmap(dom_container) {
                     absolute_x: x,
                     absolute_y: y,
                     pos: i
-                }
+                };
                 //update boundary box value
                 var d = _this.topic_data.data.hexagons[i];
-                console.log("hex:", d)
+                //console.log("hex:", d)
                 if (d.absolute_x > boundary_box.max_x) boundary_box.max_x = d.absolute_x;
                 if (d.absolute_y > boundary_box.max_y) boundary_box.max_y = d.absolute_y;
                 if (d.absolute_x < boundary_box.min_x) boundary_box.min_x = d.absolute_x;
@@ -291,43 +328,44 @@ function hierarchical_hexmap(dom_container) {
                     set_all_position(_this.topic_data.children[i], _this.topic_data.data.hexagons[i]);
             }
             delete _this.topic_data.data.submodels;
-            addImmediateNeighboursAndBorders(_this.topic_data.data.hexagons)
+            addImmediateNeighboursAndBorders(_this.topic_data.data.hexagons);
 
-            recursiveValue(_this.topic_data, 0);
+            recursiveTopicMaxValue(_this.topic_data, 0);
             _this.boundary_box = boundary_box;
             if (_this.render_on_load) {
                 enter_render(_this.topic_data, _this.view_wrap);
                 update_render(_this.topic_data, _this.view_wrap);
                 enable_minimap();
+                enable_pie_selection();
             }
             console.log("Data prepared", _this.topic_data)
         }
 
 
-    }
+    };
 
     _this.set_backend = function (host) {
         _this.backend_server = host;
-        console.log(_this.backend_server)
+        //console.log(_this.backend_server);
         return _this;
-    }
+    };
 
     _this.set_data_directory = function (dir) {
         _this.data_dir = dir;
         return _this;
-    }
+    };
 
     _this.load_topic_model = function (filename, callback) {
         d3.json(_this.data_dir + filename, function (data) {
             _this.topic_data = d3.hierarchy(data, function (d) {
                 return d.submodels;
             });
-            console.log("topic data loaded", data)
+            console.log("topic data loaded", data);
             prepare_data(); //try prepare data
             if (callback) callback(_this);
-        })
+        });
         return _this;
-    }
+    };
 
     _this.load_hexmap_data = function (filename, callback) {
         d3.json(_this.data_dir + filename, function (data) {
@@ -335,9 +373,9 @@ function hierarchical_hexmap(dom_container) {
             console.log("hexmap data loaded", data)
             prepare_data(); //try prepare data
             if (callback) callback(_this);
-        })
+        });
         return _this;
-    }
+    };
 
     function drag_graph(super_group, transition) {
         if (transition) {
@@ -734,6 +772,47 @@ function hierarchical_hexmap(dom_container) {
         return points;
     }
 
+    var enable_pie_selection = function () {
+
+        function update_checkbox() {
+            var update = _this.checkbox_container.selectAll(".pie-checkbox-text")
+                .data(_this.view.pie_selection)
+                .text(function (d) {
+                    return (d.value ? "✔ " : "✖ ") + d.name + " grants"
+                })
+        }
+
+        _this.checkbox_container = _this.container.append("div")
+            .attr("class", "checkbox-container")
+
+        var checkbox_enter = _this.checkbox_container.selectAll("div")
+            .data(_this.view.pie_selection)
+            .enter()
+            .append("div")
+            .attr("class", "pie-checkbox")
+            .style("border-color", function (d) {
+                return colors[d.name]
+            })
+
+        var texts_enter = checkbox_enter.append("div")
+            .attr("class", "pie-checkbox-text")
+            .text(function (d) {
+                return (d.value ? "✔ " : "✖ ") + d.name + " grants"
+            })
+            .on("click", function (d) {
+                d.value = !d.value;
+                _this.view.pie_select_change(d.name, d.value)
+                _this.topic_value_maximums = [];
+                recursiveTopicMaxValue(_this.topic_data, 0);
+                //console.log(_this.topic_value_maximums)
+                _this.render()
+
+                update_checkbox()
+            })
+
+
+    }
+
     var enable_minimap = function () {
         var dx = (_this.boundary_box.max_x - _this.boundary_box.min_x);
         var dy = (_this.boundary_box.max_y - _this.boundary_box.min_y);
@@ -885,10 +964,17 @@ function hierarchical_hexmap(dom_container) {
 
             var get_sum = function (d) {
                 var res;
-                if (d.topicClassesDistrib)
-                    res = d.topicClassesDistrib[0].weightedValueSum + d.topicClassesDistrib[1].weightedValueSum;
-                else {
-                    res = d[0].weightedValueSum + d[1].weightedValueSum;
+                if (d.topicClassesDistrib) {
+                    res = 0;
+                    for (var i = 0; i < d.topicClassesDistrib.length; i++) {
+                        res += d.topicClassesDistrib[i].weightedValueSum * (_this.view.pie_selected(d[i].classID) ? 1 : 0);
+                    }
+
+                } else {
+                    res = 0;
+                    for (var i = 0; i < d.length; i++) {
+                        res += d[i].weightedValueSum * (_this.view.pie_selected(d[i].classID) ? 1 : 0);
+                    }
                 }
                 //console.log("res", res)
                 return res;
@@ -898,7 +984,7 @@ function hierarchical_hexmap(dom_container) {
             for (var key in model) {
                 var s = get_sum(model[key]);
                 arr.push(s);
-                console.log(key + ", sum=" + s)
+                //console.log(key + ", sum=" + s)
             }
             var max = _this.topic_value_maximums[depth];
 
@@ -906,20 +992,28 @@ function hierarchical_hexmap(dom_container) {
                 min: Math.min.apply(Math, arr),
                 max: Math.max(Math.max.apply(Math, arr), max),
             }
-            console.log("value range result =", result)
+            //console.log("value range result =", result)
             return result;
         }
 
-        // require [{name: eu, val: num, proj: num},...]
-        var colors = {EU: "#5B5EA6", UK: "#D65076"};
+        pie_data = pie_data.sort(function (a, b) {
+            return a.classID > b.classID ? -1 : 1
+        })
 
-        var sum = pie_data[0].weightedValueSum + pie_data[1].weightedValueSum;
+        // require [{name: eu, val: num, proj: num},...]
+
+        var sum = 0;
+        for (var p_i = 0; p_i < pie_data.length; p_i++) {
+            sum += pie_data[p_i].weightedValueSum * (_this.view.pie_selected(pie_data[p_i].classID) ? 1 : 0);
+        }
+
 
         var pie = d3.pie()
             .value(function (d) {
-                console.log("d weight sum ", d.weightedValueSum)
-                return parseFloat(d.weightedValueSum);
-            })(pie_data)
+                return parseFloat(d.weightedValueSum) * (_this.view.pie_selected(d.classID) ? 1 : 0);
+            })
+            .sort(null)
+            (pie_data)
         var range = get_value_range(sibling_models);
 
         // var min_radius_percentage = 1 / 5;
@@ -929,25 +1023,37 @@ function hierarchical_hexmap(dom_container) {
         // radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
         var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2 - 10;
         var k = ((sum - range.min) / (range.max - range.min));
-        console.log("k = " + (sum) + "/" + (range.max) + "=" + k)
-        var r = Math.sqrt(k * max_radius * max_radius)+ 10;
+        console.log("k = " + (sum) + "/" + (range.max - range.min) + "=" + k, range.max, range.min)
+        var r = Math.sqrt(k * max_radius * max_radius) + 10;
 
 
         var arc = d3.arc()
             .outerRadius(r)
             .innerRadius(0)
-        console.log("r=" + r)
-        var pie_g = group.selectAll(".arc")
+        //console.log("r=" + r)
+        function arcTween(a) {
+            //this._current.outerRadius = r;
+            var intro = d3.interpolate(this._current, a);
+            this._current = intro(0);
+            return function (t) {
+                var res = arc(intro(t))
+                //console.log("res d=", intro(t))
+                return res;
+            };
+        }
+
+        var pie_g_enter = group.selectAll(".arc")
             .data(pie)
             .enter()
-        console.log(pie)
-        pie_g.insert("path", ":first-child")
-            .style("opacity", "0.3")
+        //console.log(pie)
+        pie_g_enter.insert("path", ":first-child")
+            .style("opacity", "0.5")
             .attr("class", "arc")
             .attr("d", function (d, i) {
-                var res = arc(d, i);
-                console.log("d=" + res);
-                return res;
+                d.outerRadius = r;
+                var t = arc(d, i);
+                //console.log("t=", t, d)
+                return t;
             })
             .style("fill", function (d, i) {
                 return colors[d.data.classID];
@@ -955,6 +1061,21 @@ function hierarchical_hexmap(dom_container) {
             .style("display", function () {
                 return _this.topic_search ? "none" : "initial";
             })
+
+
+        //update pie
+        pie_g_update = group.selectAll("path.arc")
+            .data(pie)
+            .transition()
+            .duration(250)
+            .attrTween("d", arcTween)
+            .style("display", function () {
+                return _this.topic_search ? "none" : "initial";
+            })
+            .style("fill", function (d, i) {
+                return colors[d.data.classID];
+            })
+
     }
 
     function draw_query_distribution(group, idx, sibling_data, depth) {
@@ -1164,11 +1285,11 @@ function hierarchical_hexmap(dom_container) {
             for (var i = 0; i < distribution.length; i++) {
                 var key = distribution[i].docClass + "-" + distribution[i].docId;
                 if (typeof _this.documents[key] !== "undefined" || _this.documents[key]) {
-                    if (distribution[i].docClass=="US") {
+                    if (distribution[i].docClass == "US") {
 
-                    }else if  (distribution[i].docClass=="CN") {
+                    } else if (distribution[i].docClass == "CN") {
 
-                    }else{
+                    } else {
                         display.push({
                             grant_id: _this.documents[key].grantId,
                             title: _this.documents[key].title,
@@ -1224,8 +1345,8 @@ function hierarchical_hexmap(dom_container) {
                 "UK": "uk/",
                 "EU-fp7": "eu-fp7/fp7_",
                 "EU-h": "eu-h/h2020_",
-                "US":"us/",
-                "CN":"cn/"
+                "US": "us/",
+                "CN": "cn/"
             }
 
             for (var i = 0; i < distribution.length; i++) {
@@ -1309,7 +1430,7 @@ function hierarchical_hexmap(dom_container) {
                 .attr("class", "data")
                 .style("opacity", 0)
             draw_query_distribution(data_group, i, node_data.data.query_result, node_data.depth);
-            console.log("draw pi i=", i)
+            //console.log("draw pi i=", i)
             draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
 
             //draw texts
@@ -1474,7 +1595,17 @@ function hierarchical_hexmap(dom_container) {
 
             })
 
+        selection.selectAll("g.data")
+            .each(function (d, i) {
+                draw_pie_in_group(
+                    d3.select(this),
+                    node_data.data.topicClassesDistrib[d.pos],
+                    node_data.data.topicClassesDistrib,
+                    node_data.depth)
+            })
 
+
+        //update search query pies
         selection.selectAll("g.data")
             .each(function (d, i) {
                 draw_query_distribution(d3.select(this), d.pos, node_data.data.query_result, node_data.depth);
