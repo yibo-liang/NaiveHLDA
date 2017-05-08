@@ -26,6 +26,8 @@ function hierarchical_hexmap(dom_container) {
     _this.hexmap_data = null;
     _this.topic_data = null;
     _this.container = d3.select(dom_container);
+
+
     _this.panel_container = null;
     _this.mini_map_container = null;
     _this.word_cloud_container = null;
@@ -144,16 +146,16 @@ function hierarchical_hexmap(dom_container) {
 
     _this.topic_value_maximums = [];
     var recursiveTopicMaxValue = function (node, depth) {
-        console.log("node.data.topicClassesDistrib=", node.data.topicClassesDistrib)
+        //console.log("node.data.topicClassesDistrib=", node.data.topicClassesDistrib)
         for (var i in node.data.topicClassesDistrib) {
             var d = node.data.topicClassesDistrib[i];
             var sum = 0;
-            console.log(i)
+            //console.log(i)
             for (var ci = 0; ci < d.length; ci++) {
-                console.log("d[ci].classID=", d[ci].classID, d[ci].weightedValueSum, ci)
+                //console.log("d[ci].classID=", d[ci].classID, d[ci].weightedValueSum, ci)
                 sum += d[ci].weightedValueSum * (_this.view.pie_selected(d[ci].classID) ? 1 : 0);
             }
-            console.log(sum, depth)
+            //.log(sum, depth)
             if (!_this.topic_value_maximums[depth] || sum > _this.topic_value_maximums[depth]) {
                 _this.topic_value_maximums[depth] = sum;
 
@@ -1023,7 +1025,7 @@ function hierarchical_hexmap(dom_container) {
         // radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
         var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2 - 10;
         var k = ((sum - range.min) / (range.max - range.min));
-        console.log("k = " + (sum) + "/" + (range.max - range.min) + "=" + k, range.max, range.min)
+        //console.log("k = " + (sum) + "/" + (range.max - range.min) + "=" + k, range.max, range.min)
         var r = Math.sqrt(k * max_radius * max_radius) + 10;
 
 
@@ -1272,7 +1274,7 @@ function hierarchical_hexmap(dom_container) {
 
 
             var distribution = _this.topic_doc_distribution[suffix];
-            //console.log("distr", distribution)
+            //console.log("callback ")
             var source_dict = {
                 "UK": "GTR",
                 "EU-fp7": "FP7",
@@ -1284,11 +1286,27 @@ function hierarchical_hexmap(dom_container) {
             var display = [];
             for (var i = 0; i < distribution.length; i++) {
                 var key = distribution[i].docClass + "-" + distribution[i].docId;
-                if (typeof _this.documents[key] !== "undefined" || _this.documents[key]) {
+                if (typeof _this.documents[key] !== "undefined" && _this.documents[key] !== null) {
                     if (distribution[i].docClass == "US") {
-
+                        //console.log(key,_this.documents[key])
+                        display.push(
+                            {
+                                grant_id: _this.documents[key].id,
+                                title: _this.documents[key].title,
+                                source: source_dict[distribution[i].docClass],
+                                relevance: distribution[i].topicWeight * 100
+                            }
+                        )
                     } else if (distribution[i].docClass == "CN") {
-
+                        //console.log(key)
+                        display.push(
+                            {
+                                grant_id: _this.documents[key].id,
+                                title: _this.documents[key].title,
+                                source: source_dict[distribution[i].docClass],
+                                relevance: distribution[i].topicWeight * 100
+                            }
+                        )
                     } else {
                         display.push({
                             grant_id: _this.documents[key].grantId,
@@ -1297,13 +1315,16 @@ function hierarchical_hexmap(dom_container) {
                             relevance: distribution[i].topicWeight * 100
                         });
                     }
+                } else {
+                    //console.log(key)
                 }
 
             }
 
-            if (display.length < doc_num) {
+            if (display.length < doc_num - 1) {
                 return;
             }
+            //console.log(display)
             _this.document_list_container.selectAll("div")
                 .remove();
 
@@ -1351,14 +1372,16 @@ function hierarchical_hexmap(dom_container) {
 
             for (var i = 0; i < distribution.length; i++) {
                 var path = "data/grants/" + dir_dict[distribution[i].docClass] + distribution[i].docId + ".json";
-                var key = distribution[i].docClass + "-" + distribution[i].docId;
-                //console.log(!_this.documents[key], _this.documents[key], path)
+                //console.log(distribution[i])
+                var key = distribution[i].docClass + "-"
+                    + distribution[i].docId;
+                //console.log(key, path)
                 if (!_this.documents[key]) {
 
                     function load(doc_key, doc_num) {
                         d3.json(path, function (data) {
 
-
+                            //console.log(data)
                             _this.documents[doc_key] = data;
                             //console.log(_this.documents)
                             callback(doc_num);
@@ -1375,6 +1398,7 @@ function hierarchical_hexmap(dom_container) {
 
         //load disassembled topic doc distribution file if not already loaded
         if (!_this.topic_doc_distribution[suffix]) {
+            //console.log(path)
             d3.json(path, function (data) {
                 //data is a list of {docId, docClass, topicWeight}
                 _this.topic_doc_distribution[suffix] = data
@@ -1385,7 +1409,7 @@ function hierarchical_hexmap(dom_container) {
                     .filter(function (d) {
                         return d.topicWeight > 0.01;
                     });
-
+                //console.log(_this.topic_doc_distribution[suffix], suffix)
                 get_all_topic_information(suffix, new_document_data_callback)
             })
         } else {
@@ -1433,13 +1457,46 @@ function hierarchical_hexmap(dom_container) {
             //console.log("draw pi i=", i)
             draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
 
+
+            //get rid of dominating words,
+            //a word is dominating if it occurs more than 3 times in sibliing topics
+
             //draw texts
+            function sort_topicwords(a, b) {
+                return b.weight - a.weight;
+            }
+            function sibling_occurence(word, node_data) {
+                //console.log(word,node_data.data.topics)
+                var occur = 0;
+                for (var ti in node_data.data.topics) {
+                    var t_texts = node_data.data.topics[ti];
+                    var sorted = t_texts.sort(sort_topicwords);
+                    //console.log(sorted)
+                    for (var wi = 0; wi < 3; wi++) {
+                        //
+
+                        if (sorted[wi].label == word) {
+                            //console.log(sorted[wi].label, word);
+                            occur++;
+                            break;
+                        }
+                    }
+                }
+                //console.log(node_data.data.topics, occur)
+                return occur;
+            }
+
+
             var texts = node_data.data.topics[i];
             var visible_texts = texts
-                .sort(function (a, b) {
-                    return b.weight - a.weight;
+                .sort(sort_topicwords)
+                .slice(0,8)
+                .filter(function (tw) {
+                    return sibling_occurence(tw.label, node_data) < 3;
                 })
-                .slice(0, 3)
+                .slice(0,3)
+
+
             var text_group = data_group.append("g")
                 .attr("class", "texts")
             text_group.selectAll("text")
@@ -1488,7 +1545,7 @@ function hierarchical_hexmap(dom_container) {
                         hex: d
                     }
 
-                    console.log(node_data.data.topicClassesDistrib[i], i)
+                    //console.log(node_data.data.topicClassesDistrib[i], i)
                     display_file_list(node_data, i);
                     _this.render();
                 })
