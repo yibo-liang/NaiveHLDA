@@ -1,0 +1,8 @@
+0. Add another Model
+1. Add explanation for size of pies
+   1.1 add pie for project number
+2. add explanation of border
+   2.1 cancel the selection boarder
+3. Chinese title not understandable for english user, find a way
+4. Explanation of how vlaue are distributed
+5. Add bread crums for topic model

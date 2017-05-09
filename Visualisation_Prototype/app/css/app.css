@@ -39,9 +39,6 @@ div.mini-map-view {
     position: absolute;
 }
 
-polygon:hover {
-    stroke-width: 2;
-}
 
 .document-list {
     font: 14px 'Open Sans', sans-serif;

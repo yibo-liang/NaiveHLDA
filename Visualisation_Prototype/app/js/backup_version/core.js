@@ -416,8 +416,8 @@ function hierarchical_hexmap(dom_container) {
 
         var vertical_hex_offset = _this.config.hexagon_scale;
         var horizontal_hex_offset = Math.sqrt(3) / 2 * vertical_hex_offset;
-        offsetx = _this.config.width / 2 + horizontal_hex_offset;
-        offsety = _this.config.height / 2 + vertical_hex_offset;
+        offsetx = _this.config.width / 2 - horizontal_hex_offset / 2
+        offsety = _this.config.height / 2 - vertical_hex_offset / 2;
 
         console.log("offsets", offsetx, offsety)
 
@@ -490,7 +490,8 @@ function hierarchical_hexmap(dom_container) {
             .append("div")
             .attr("class", "panel-wrapper");
 
-        {   //Main view
+        {
+            //Main view
             //adding svg
             _this.svg = _this.container.append("svg")
                 .attr("height", _this.config.height + "px")
@@ -1465,6 +1466,7 @@ function hierarchical_hexmap(dom_container) {
             function sort_topicwords(a, b) {
                 return b.weight - a.weight;
             }
+
             function sibling_occurence(word, node_data) {
                 //console.log(word,node_data.data.topics)
                 var occur = 0;
@@ -1490,11 +1492,11 @@ function hierarchical_hexmap(dom_container) {
             var texts = node_data.data.topics[i];
             var visible_texts = texts
                 .sort(sort_topicwords)
-                .slice(0,8)
+                .slice(0, 8)
                 .filter(function (tw) {
                     return sibling_occurence(tw.label, node_data) < 3;
                 })
-                .slice(0,3)
+                .slice(0, 3)
 
 
             var text_group = data_group.append("g")

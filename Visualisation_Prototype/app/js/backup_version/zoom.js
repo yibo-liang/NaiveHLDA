@@ -64,7 +64,7 @@ function clickcancel() {
 
 
 //
-function dummy_handler(e, callback){
+function moushwheel_event_handler(e, callback){
     // cross-browser wheel delta
     var e = window.event || e; // old IE support
     var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
@@ -77,7 +77,7 @@ function bind_mousewheel(dom_id, MouseWheelHandler){
     var dom=document.getElementById(dom_id);
 
     var dummy=function(e){
-        dummy_handler(e, MouseWheelHandler);
+        moushwheel_event_handler(e, MouseWheelHandler);
     }
 
     if (dom.addEventListener) {
