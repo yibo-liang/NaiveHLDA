@@ -470,6 +470,9 @@ function add_ui(_this) {
     _this.init_list.push(init_ui)
 
     var enable_minimap = function () {
+
+        if (_this.topic_data.length) return;
+
         var dx = (_this.boundary_box.max_x - _this.boundary_box.min_x);
         var dy = (_this.boundary_box.max_y - _this.boundary_box.min_y);
         var hw_scale = dx / dy
@@ -549,6 +552,9 @@ function add_ui(_this) {
     }
 
     var change_minimap_view = function () {
+
+        if (_this.topic_data.length) return;
+
         var mini_view = _this.mini_map_container.select("div.mini-map-view");
         var scale = 1 / _this.view.zoom_scale;
         mini_view
@@ -590,7 +596,7 @@ function add_ui(_this) {
                 d.value = !d.value;
                 _this.view.pie_select_change(d.name, d.value)
                 _this.topic_value_maximums = [];
-                _this.recursiveTopicMaxValue(_this.topic_data, 0);
+                _this.linearTopicMaxValue(_this.topic_data, 0);
                 //console.log(_this.topic_value_maximums)
                 _this.render()
 
@@ -624,21 +630,30 @@ function add_ui(_this) {
     _this.enable_zooming = function () {
 
         bind_mousewheel("hex_svg", function (delta) {
-            _this.view.zoom_power = Math.min(Math.max(delta * 0.5 + _this.view.zoom_power, 1), 7);
+            _this.view.zoom_power = Math.min(Math.max(delta * 1 + _this.view.zoom_power, 1), 7);
             _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
             _this.view.zoom_scale = Math.min(Math.max(_this.view.zoom_scale, 1), 27);
             //console.log(zoom_depth())
-            drag_graph(_this.view_wrap, true);
-            _this.render()
+            setTimeout(function(){
+                drag_graph(_this.view_wrap, true);
+                _this.render()
+            }, 100)
         })
         return _this;
     }
 
     _this.get_zooming_opacity = function (node_data) {
-        if (_this.get_zoom_depth() !== node_data.depth && node_data.depth !== _this.config.max_depth) {
-            return 0.05
+        if (_this.topic_data.length){
+            if (_this.get_zoom_depth() !== node_data.level && node_data.level !== _this.config.max_depth) {
+                return 0.05
+            }
+            return 1;
+        }else{
+            if (_this.get_zoom_depth() !== node_data.depth && node_data.depth !== _this.config.max_depth) {
+                return 0.05
+            }
+            return 1;
         }
-        return 1;
     }
 
     _this.get_zoom_depth = function () {
@@ -782,7 +797,8 @@ function add_ui(_this) {
         var trace = get_topic_node_position(i, node_data);
         var prefix = "disassembled/topicsDocsDistrib";
         var suffix = trace.join("_"); //suffix used as key to trace topic objects
-        var path = _this.data_dir + prefix + suffix + ".json";
+        //console.log(node_data.level ,i);
+        var path = _this.data_dir.length ?  _this.data_dir[node_data.level ] + prefix + suffix + ".json" : _this.data_dir + prefix + suffix + ".json";
 
         _this.document_list_container.append("div")
             .attr("class", "loading")
@@ -889,10 +905,10 @@ function add_ui(_this) {
                 "US": "us/",
                 "CN": "cn/"
             }
-
+            //console.log("distribution",distribution)
             for (var i = 0; i < distribution.length; i++) {
                 var path = "data/grants/" + dir_dict[distribution[i].docClass] + distribution[i].docId + ".json";
-                //console.log(distribution[i])
+
                 var key = distribution[i].docClass + "-"
                     + distribution[i].docId;
                 //console.log(key, path)

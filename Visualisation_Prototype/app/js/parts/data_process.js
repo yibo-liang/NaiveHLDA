@@ -4,9 +4,35 @@
 
 function add_data_process(_this) {
 
+    _this.set_data_directory = function (dir) {
+        _this.data_dir = dir;
+        return _this;
+    };
+
+    _this.load_topic_model = function (filename, callback) {
+        d3.json(_this.data_dir + filename, function (data) {
+            _this.topic_data = d3.hierarchy(data, function (d) {
+                return d.submodels;
+            });
+            console.log("topic data loaded", data);
+            _this.prepare_data(); //try prepare data
+            if (callback) callback(_this);
+        });
+        return _this;
+    };
+
+    _this.load_hexmap_data = function (filename, callback) {
+        d3.json(_this.data_dir + filename, function (data) {
+            _this.hexmap_data = data;
+            console.log("hexmap data loaded", data)
+            _this.prepare_data(); //try prepare data
+            if (callback) callback(_this);
+        });
+        return _this;
+    };
 
     _this.topic_value_maximums = [];
-    _this.recursiveTopicMaxValue = function (node, depth) {
+    _this.linearTopicMaxValue = function (node, depth) {
         //console.log("node.data.topicClassesDistrib=", node.data.topicClassesDistrib)
         for (var i in node.data.topicClassesDistrib) {
             var d = node.data.topicClassesDistrib[i];
@@ -24,7 +50,7 @@ function add_data_process(_this) {
         }
         if (node.children)
             for (var i = 0; i < node.children.length; i++) {
-                _this.recursiveTopicMaxValue(node.children[i], depth + 1);
+                _this.linearTopicMaxValue(node.children[i], depth + 1);
             }
     }
     _this.boundary_box = null;
@@ -193,7 +219,7 @@ function add_data_process(_this) {
             delete _this.topic_data.data.submodels;
             addImmediateNeighboursAndBorders(_this.topic_data.data.hexagons);
 
-            _this.recursiveTopicMaxValue(_this.topic_data, 0);
+            _this.linearTopicMaxValue(_this.topic_data, 0);
             _this.boundary_box = boundary_box;
             if (_this.render_on_load) {
                 _this.postload();

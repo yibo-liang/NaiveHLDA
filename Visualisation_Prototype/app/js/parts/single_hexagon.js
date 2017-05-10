@@ -393,7 +393,7 @@ function add_single_hexagon_render(_this) {
                 })
                 .on("click", function () {
                     _this.show_cloud(node_data.data.topics[i]);
-                    //console.log(node_data.data)
+                    console.log(d)
                     _this.view.selected_hex = {
                         data: node_data,
                         hex: d

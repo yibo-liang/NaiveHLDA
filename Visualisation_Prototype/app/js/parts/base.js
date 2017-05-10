@@ -70,32 +70,6 @@ var base_hexmap = function (dom_container) {
         return _this;
     };
 
-    _this.set_data_directory = function (dir) {
-        _this.data_dir = dir;
-        return _this;
-    };
-
-    _this.load_topic_model = function (filename, callback) {
-        d3.json(_this.data_dir + filename, function (data) {
-            _this.topic_data = d3.hierarchy(data, function (d) {
-                return d.submodels;
-            });
-            console.log("topic data loaded", data);
-            _this.prepare_data(); //try prepare data
-            if (callback) callback(_this);
-        });
-        return _this;
-    };
-
-    _this.load_hexmap_data = function (filename, callback) {
-        d3.json(_this.data_dir + filename, function (data) {
-            _this.hexmap_data = data;
-            console.log("hexmap data loaded", data)
-            _this.prepare_data(); //try prepare data
-            if (callback) callback(_this);
-        });
-        return _this;
-    };
 
     _this.init_list = [];
     _this.init = function () {

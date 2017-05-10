@@ -163,7 +163,7 @@ function hierarchical_hexmap(dom_container) {
         }
         if (node.children)
             for (var i = 0; i < node.children.length; i++) {
-                recursiveTopicMaxValue(node.children[i], depth + 1);
+                linearTopicMaxValue(node.children[i], depth + 1);
             }
     }
 
@@ -332,7 +332,7 @@ function hierarchical_hexmap(dom_container) {
             delete _this.topic_data.data.submodels;
             addImmediateNeighboursAndBorders(_this.topic_data.data.hexagons);
 
-            recursiveTopicMaxValue(_this.topic_data, 0);
+            linearTopicMaxValue(_this.topic_data, 0);
             _this.boundary_box = boundary_box;
             if (_this.render_on_load) {
                 enter_render(_this.topic_data, _this.view_wrap);
@@ -806,7 +806,7 @@ function hierarchical_hexmap(dom_container) {
                 d.value = !d.value;
                 _this.view.pie_select_change(d.name, d.value)
                 _this.topic_value_maximums = [];
-                recursiveTopicMaxValue(_this.topic_data, 0);
+                linearTopicMaxValue(_this.topic_data, 0);
                 //console.log(_this.topic_value_maximums)
                 _this.render()
 
