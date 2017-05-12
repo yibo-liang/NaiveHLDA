@@ -1,6 +1,16 @@
+
+
+div.mini-map{
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 svg text {
     pointer-events: none;
-    font: 14px 'Open Sans', sans-serif;
+    font: 28px 'Open Sans', sans-serif;
     cursor: default;
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -192,10 +202,10 @@ div.show-selected:hover {
 
 div.checkbox-container {
     left: 30px;
-    bottom: 200px;
+    bottom: 300px;
     position: absolute;
-    height: 150px;
-    width: 200px;
+    height: 120px;
+    width: 120px;
     padding: 15px 15px 15px 0;
     background-color: rgba(255, 255, 255, 0.3);
     display: block;
@@ -226,4 +236,54 @@ div.pie-checkbox-text {
 
 div.pie-checkbox-text:hover{
     color: darkgray;
+}
+
+body {
+
+
+    user-drag: none;
+    -webkit-user-drag: none;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+table:hover{
+
+    pointer-events: auto;
+}
+
+td{
+    user-drag: none;
+    -webkit-user-drag: none;
+
+}
+
+
+td:hover {
+
+    -webkit-user-select: initial;
+    -moz-user-select: initial;
+    -ms-user-select: initial;
+    user-select: initial;
+}
+
+div.hexmap-container{
+    position: relative;
+}
+
+div.overview-container{
+
+    background-color: rgba(240,240,240,0.6);
+    visibility: hidden;
+    position: absolute;
+    top:0;
+    left:0;
+    height:100%;
+    width: 100%;
+}
+
+canvas.overview{
 }

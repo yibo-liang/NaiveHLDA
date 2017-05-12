@@ -7,6 +7,7 @@
     <script src="lib/d3.js"></script>
     <script src="lib/d3.layout.cloud.js"></script>
     <script src="js/parts/base.js"></script>
+    <script src="js/parts/zooming_m2.js"></script>
     <script src="js/parts/ui.js"></script>
     <script src="js/parts/data_process_m2.js"></script>
     <script src="js/parts/single_hexagon.js"></script>
@@ -23,6 +24,7 @@
     var hexmap=new base_hexmap("#container");
     console.log(hexmap)
     add_data_process_m2(hexmap);
+    add_zooming_m2(hexmap);
     add_ui(hexmap);
     add_single_hexagon_render(hexmap);
     add_hexmap_model_2(hexmap);

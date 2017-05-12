@@ -24,6 +24,7 @@ function add_single_hexagon_render(_this) {
                 wait = null;
             // euclidean distance
             function dist(a, b) {
+                if (!a || !b) return 99999;//if a or b is deleted by the time this function is called, return an large number to avoid bug
                 return Math.sqrt(Math.pow(a[0] - b[0], 2), Math.pow(a[1] - b[1], 2));
             }
 
@@ -38,7 +39,7 @@ function add_single_hexagon_render(_this) {
                     if (wait) {
                         window.clearTimeout(wait);
                         wait = null;
-                        console.log(event)
+                        //console.log(event)
                         event._.dblclick[0].value(d3.event);
                     } else {
                         wait = window.setTimeout((function (e) {
@@ -76,6 +77,7 @@ function add_single_hexagon_render(_this) {
             .data(borders)
             .enter()
             .append("path")
+            .attr("class", "boarder")
             .attr("d", function (datum, i) {
                 var rotate = datum - 1;
                 var r = 1 * _this.config.hexagon_scale / shrink;
@@ -93,35 +95,54 @@ function add_single_hexagon_render(_this) {
             .attr("stroke-linecap", "round")
             .style("z-index", 999)
             .style("opacity", 0)
-            .transition()
-            .style("opacity", 1)
+            .style("opacity", function () {
+                return _this.get_zooming_opacity(node_data)
+            })
+
+    }
+
+    _this.update_boarder = function (container, node_data, borders) {
+        if (node_data.depth == 0)
+            container.selectAll("path.boarder")
+                .data(borders)
+                .transition()
+                .style("opacity", function () {
+                    return 1
+                })
     }
 
     _this.draw_pie_in_group = function (group, pie_data, sibling_models, depth) {
         function get_value_range(model) {
+
+            if (model.value_range && model.value_range[_this.view.pie_selection_key]) {
+                //console.log(model.value_range[_this.view.pie_selection_key])
+                return model.value_range[_this.view.pie_selection_key];
+            }
 
             var get_sum = function (d) {
                 var res;
                 if (d.topicClassesDistrib) {
                     res = 0;
                     for (var i = 0; i < d.topicClassesDistrib.length; i++) {
-                        res += d.topicClassesDistrib[i].weightedValueSum * (_this.view.pie_selected(d[i].classID) ? 1 : 0);
+                        var e = (_this.view.pie_selected(d[i].classID) ? 1 : 0);
+                        res += d.topicClassesDistrib[i].weightedValueSum * e;
                     }
 
                 } else {
                     res = 0;
                     for (var i = 0; i < d.length; i++) {
-                        res += d[i].weightedValueSum * (_this.view.pie_selected(d[i].classID) ? 1 : 0);
+                        var e = (_this.view.pie_selected(d[i].classID) ? 1 : 0);
+                        res += d[i].weightedValueSum * e;
                     }
                 }
                 //console.log("res", res)
-                return res;
+                return {result: res, key: key};
             }
             var arr = []
 
             for (var key in model) {
-                var s = get_sum(model[key]);
-                arr.push(s);
+                var res = get_sum(model[key]).result
+                arr.push(res);
                 //console.log(key + ", sum=" + s)
             }
             var max = _this.topic_value_maximums[depth];
@@ -130,6 +151,9 @@ function add_single_hexagon_render(_this) {
                 min: Math.min.apply(Math, arr),
                 max: Math.max(Math.max.apply(Math, arr), max),
             }
+            if (!model.value_range)
+                model.value_range = {}
+            model.value_range[_this.view.pie_selection_key] = result;
             //console.log("value range result =", result)
             return result;
         }
@@ -158,15 +182,15 @@ function add_single_hexagon_render(_this) {
         // var min_radius_percentage = 1 / 5;
         //
         // var radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
-        // //console.log(radius, range)
         // radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
         var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2 - 10;
         var k = ((sum - range.min) / (range.max - range.min));
         //console.log("k = " + (sum) + "/" + (range.max - range.min) + "=" + k, range.max, range.min)
         var new_r = Math.sqrt(k * max_radius * max_radius) + 10;
+        //console.log(new_r);
+        if (isNaN(new_r)) new_r = 0;
 
-
-        pie.forEach(function(d,i){
+        pie.forEach(function (d, i) {
             d.outerRadius = new_r;
             //console.log(d)
         })
@@ -175,7 +199,7 @@ function add_single_hexagon_render(_this) {
             .outerRadius(new_r)
             .innerRadius(0)
         //console.log("r=" + r)
-        function arcTween(d,i) {
+        function arcTween(d, i) {
 
 
             var intro = d3.interpolate(this._current, d);
@@ -297,7 +321,7 @@ function add_single_hexagon_render(_this) {
                 .style("stroke-width", 1)
 
             //draw borders for toplevel
-            if (node_data.depth == 0) {
+            if (node_data.depth == 0 || node_data.level) {
                 draw_boarders(container, node_data, d.borders);
             }
 
@@ -306,9 +330,12 @@ function add_single_hexagon_render(_this) {
             var data_group = container.append("g")
                 .attr("class", "data")
                 .style("opacity", 0)
-            _this.draw_query_distribution(data_group, i, node_data.data.query_result, node_data.depth);
+
+            if (_this.topic_search)
+                _this.draw_query_distribution(data_group, i, node_data.data.query_result, node_data.depth);
             //console.log("draw pi i=", i)
-            _this.draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
+            if (!_this.topic_search)
+                _this.draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
 
 
             //get rid of dominating words,
@@ -341,14 +368,14 @@ function add_single_hexagon_render(_this) {
             }
 
 
-            var texts = node_data.data.topics[i];
+            var texts = node_data.data.topics[i].sort(sort_topicwords).slice(0, 3);
             var visible_texts = texts
-                .sort(sort_topicwords)
-                .slice(0, 8)
-                .filter(function (tw) {
-                    return sibling_occurence(tw.label, node_data) < 3;
-                })
-                .slice(0, 3)
+            // .sort(sort_topicwords)
+            // .slice(0, 8)
+            // .filter(function (tw) {
+            //     return sibling_occurence(tw.label, node_data) < 3;
+            // })
+            // .slice(0, 3)
 
 
             var text_group = data_group.append("g")
@@ -361,15 +388,15 @@ function add_single_hexagon_render(_this) {
                     return d.label
                 })
                 .style("transform", function (d, i) {
-                    var font_size = 24;
+                    var font_size = 44;
                     var order = [0, 1, -1]
                     return "translate(" + 0 + "," + (order[i]) * font_size + "px)"
                 })
                 .style("font-size", function (d, i) {
-                    return i == 0 ? "18" : "14";
+                    return i == 0 ? "36" : "28";
                 })
                 .style("font-weight", function (d, i) {
-                    return i == 0 ? "600" : "400";
+                    return i == 0 ? "600" : "200";
                 })
                 .style("text-anchor", "middle")
 
@@ -382,18 +409,18 @@ function add_single_hexagon_render(_this) {
             container.call(cc);
             cc
                 .on("dblclick", function () {
-                    console.log("click dpth = " + 0);
+                    //console.log("click dpth = " , node_data);
                     _this.show_cloud(node_data.data.topics[i]);
                     _this.view.selected_hex = {
                         data: node_data,
                         hex: d
                     }
 
-                    _this.zoom_to_depth(node_data.depth, d.absolute_x, d.absolute_y);
+                    _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
                 })
                 .on("click", function () {
                     _this.show_cloud(node_data.data.topics[i]);
-                    console.log(d)
+                    //console.log(node_data, _this.get_zooming_opacity(node_data))
                     _this.view.selected_hex = {
                         data: node_data,
                         hex: d

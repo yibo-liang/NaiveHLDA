@@ -2,7 +2,7 @@
  * Created by Devid on 06/05/2017.
  */
 
-function add_hexmap_model_1(_this){
+function add_hexmap_model_1(_this) {
     var switch_pie_display = function (container, node_data, d, i) {
         container.selectAll(".arc").style("display",
             function () {
@@ -16,11 +16,11 @@ function add_hexmap_model_1(_this){
     }
 
 
-
     var filter_invisible_hexagons = function (hexagons, depth) {
-        var padding = -_this.config.min_hex_r * _this.view.zoom_scale;
-        var res = [];
         var display_r = Math.pow(1 / 3, depth) * _this.config.hexagon_scale * _this.view.zoom_scale;
+        //console.log(display_r)
+        var padding = -display_r * 0.75// -_this.config.min_hex_r * 1 ;
+        var res = [];
 
         for (var i = 0; i < hexagons.length; i++) {
             var coor = {
@@ -28,7 +28,7 @@ function add_hexmap_model_1(_this){
                 y: (hexagons[i].absolute_y + _this.view.y) * _this.view.zoom_scale + _this.view.offsety
             }
 
-            if (_this.get_zoom_depth () < depth) { // too small to see
+            if (_this.get_zoom_depth() < depth) { // too small to see
                 hexagons[i].visible = false;
                 res.push(hexagons[i])
             } else if (coor.x > padding && coor.x < _this.config.width - padding //visible within svg
@@ -132,10 +132,13 @@ function add_hexmap_model_1(_this){
                 _this.draw_topic(d3.select(this), node_data, d, d.pos)
             })
             .transition()
-            .duration(500)
+            .duration(_this.config.transition_duration)
             .style("opacity", 1)
 
         //update
+
+
+
         selection.selectAll("g")
             .each(function (d, i) {
                 switch_pie_display(d3.select(this), node_data, d, d.pos)
@@ -166,18 +169,18 @@ function add_hexmap_model_1(_this){
                     d3.select(this)
                         .style("fill", _this.colors.selected)
                         .style("stroke-width", 1.5)
-                        //.style("stroke", "rgba(100,100,100,0.7")
+                    //.style("stroke", "rgba(100,100,100,0.7")
                 } else {
                     d3.select(this)
                         .style("fill", _this.colors.background)
                         .style("stroke-width", 1.5)
-                        //.style("stroke", _this.colors.border)
+                    //.style("stroke", _this.colors.border)
                 }
             })
 
         selection.select("g.data")
             .transition()
-            .duration(500)
+            .duration(_this.config.transition_duration)
             .style("opacity", _this.get_zooming_opacity(node_data))
 
 
@@ -198,9 +201,14 @@ function add_hexmap_model_1(_this){
             })
 
 
+        selection.each(function (d, i) {
+            _this.update_boarder(d3.select(this), node_data, d.borders)
+        })
+
+
     }
 
-    _this.postload_list.push(function render_once(){
+    _this.postload_list.push(function render_once() {
         enter_render(_this.topic_data, _this.view_wrap);
         update_render(_this.topic_data, _this.view_wrap);
     });
@@ -209,7 +217,6 @@ function add_hexmap_model_1(_this){
         update_render(_this.topic_data, _this.view_wrap);
         return _this;
     }
-
 
 
 }

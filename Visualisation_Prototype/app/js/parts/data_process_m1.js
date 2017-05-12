@@ -6,6 +6,7 @@ function add_data_process(_this) {
 
     _this.set_data_directory = function (dir) {
         _this.data_dir = dir;
+        console.log("dir="+dir)
         return _this;
     };
 

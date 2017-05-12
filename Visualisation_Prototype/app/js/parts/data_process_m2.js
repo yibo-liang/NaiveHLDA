@@ -50,6 +50,24 @@ function add_data_process_m2(_this) {
     };
 
 
+    _this.load_compare_data = function (filename_list, callback) {
+
+        _this.data_count = filename_list.length;
+        _this.compare_data = [];
+        for (var i = 0; i < filename_list.length; i++) {
+            (function (i) {
+                var filename = filename_list[i];
+                d3.json(_this.data_dir[i] + filename, function (data) {
+                    _this.compare_data[i] = data;
+                    console.log("compare data loaded", data)
+                    if (callback) callback(_this);
+                });
+            })(i);
+        }
+
+        return _this;
+    };
+
     _this.topic_value_maximums = [];
     _this.linearTopicMaxValue = function (topic_data) {
         //console.log("node.data.topicClassesDistrib=", node.data.topicClassesDistrib)
@@ -107,7 +125,7 @@ function add_data_process_m2(_this) {
         boundary_box.max_x *= scale;
         boundary_box.max_y *= scale;
 
-        //console.log(boundary_box)
+        //console.log(JSON.stringify(boundary_box))
 
         _this.boundary_box = boundary_box;
     }
@@ -240,7 +258,7 @@ function add_data_process_m2(_this) {
                 // enable_minimap();
                 // enable_pie_selection();
             }
-            console.log("Data prepared", _this.topic_data)
+            //console.log("Data prepared", _this.topic_data)
         }
     };
 

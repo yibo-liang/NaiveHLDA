@@ -46,7 +46,7 @@ function add_ui(_this) {
     _this.render_on_load = true;
 
 
-    _this.country_colours = {EU: "#5B5EA6", UK: "#D65076", US: "#05A0FF", CN: "#FF0505"};
+    _this.country_colours = {EU: "#5B5EA6", UK: "#D65076", US: "#118499", CN: "#FF7735"};
 
     _this.colors = {
         background: "rgba(255,255,255,0.95)",
@@ -87,6 +87,7 @@ function add_ui(_this) {
             {name: "EU", value: true},
             {name: "CN", value: true}
         ],
+        pie_selection_key: "1111",
         pie_select_change: function (name, value) {
             for (var i = 0; i < _this.view.pie_selection.length; i++) {
                 if (_this.view.pie_selection[i].name == name) {
@@ -94,6 +95,16 @@ function add_ui(_this) {
                     break;
                 }
             }
+
+            var get_key = function () {
+                var key = ""
+                for (var i = 0; i < _this.view.pie_selection.length; i++) {
+                    var e = ( _this.view.pie_selection[i].value ? 1 : 0);
+                    key+=e;
+                }
+                return key;
+            }
+            _this.view.pie_selection_key=get_key();
             //console.log(_this.view.pie_selection)
         },
         pie_selected: function (t) {
@@ -118,7 +129,7 @@ function add_ui(_this) {
         _this.config.height = client_rect.height;
 
         //adding panel_container
-        _this.config.hexagon_scale = (_this.config.width - 100) / 12;
+        _this.config.hexagon_scale = (_this.config.width - 100) / 9;
         _this.config.min_hex_r = _this.config.hexagon_scale;
 
         var vertical_hex_offset = _this.config.hexagon_scale;
@@ -159,7 +170,7 @@ function add_ui(_this) {
             }
 
             var show_search_words = function () {
-                console.log("show search words")
+                //console.log("show search words")
                 _this.search_word_panel_wrap
                     .style("display", "initial")
                 _this.default_panel_wrap
@@ -201,11 +212,20 @@ function add_ui(_this) {
         {
             //Main view
             //adding svg
-            _this.svg = _this.container.append("svg")
+            _this.hexmap_container = _this.container.append("div")
+                .style("height", _this.config.height + "px")
+                .style("width", _this.config.width + "px")
+                .attr("class", "hexmap-container")
+                .attr("id", "hexmap_container")
+
+            _this.svg = _this.hexmap_container
+                .append("svg")
                 .attr("height", _this.config.height + "px")
                 .attr("width", _this.config.width + "px")
                 .attr("class", "hexmap")
                 .attr("id", "hex_svg")
+
+            document.getElementById('hex_svg').draggable = false;
 
             //a group wrap for dragging and zooming
             _this.view_wrap = _this.svg.append("g")
@@ -429,6 +449,8 @@ function add_ui(_this) {
 
             _this.view.drag_d_pos.x = _this.view.x;
             _this.view.drag_d_pos.y = _this.view.y;
+
+            //console.log(_this.view.dragging, pos[0]+","+pos[1]);
         }
 
         function dragging() {
@@ -445,7 +467,11 @@ function add_ui(_this) {
                 _this.view.x = Math.max(Math.min(nx, -_this.boundary_box.min_x), -_this.boundary_box.max_x)
                 _this.view.y = Math.max(Math.min(ny, -_this.boundary_box.min_y), -_this.boundary_box.max_y)
 
-                drag_graph(_this.view_wrap);
+                //console.log(_this.view.dragging, pos[0]+","+pos[1]);
+
+                _this.drag_graph(_this.view_wrap);
+                _this.render();
+
             }
         }
 
@@ -453,8 +479,10 @@ function add_ui(_this) {
             if (_this.view.dragging) {
                 _this.render();
             }
+
             //console.log(_this.view.x, _this.view.y)
             _this.view.dragging = false;
+            //console.log(_this.view.dragging);
         }
 
         //binding mouse events for dragging effect
@@ -462,7 +490,7 @@ function add_ui(_this) {
             .on("mousedown", drag_start)
             .on("mouseup", drag_finish)
             .on("mouseleave", drag_finish)
-            .on("mousemove", dragging)
+            .on("mousemove",  dragging)
 
 
     }
@@ -492,8 +520,9 @@ function add_ui(_this) {
                 var coordinates = d3.mouse(this);
                 _this.view.x = (-coordinates[0] + _this.view.minimap_offsetx) / _this.view.minimap_scale;
                 _this.view.y = (-coordinates[1] + _this.view.minimap_offsety) / _this.view.minimap_scale;
-                drag_graph(_this.view_wrap, true);
+                _this.drag_graph(_this.view_wrap, true);
                 _this.render();
+
             })
 
         _this.mini_map_container.append("canvas")
@@ -523,6 +552,7 @@ function add_ui(_this) {
 
         //console.log(scale, m_hex_r, canvas)
         var ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.strokeStyle = "rgba(55,55,55,0.5)"
         ctx.strokeWidth = "1"
         for (var i = 0; i < hexagons.length; i++) {
@@ -606,7 +636,7 @@ function add_ui(_this) {
 
     }
 
-    var drag_graph = function (super_group, transition) {
+    _this.drag_graph = function (super_group, transition) {
         if (transition) {
             super_group
                 .transition()
@@ -626,54 +656,6 @@ function add_ui(_this) {
         }
         change_minimap_view();
     }
-
-    _this.enable_zooming = function () {
-
-        bind_mousewheel("hex_svg", function (delta) {
-            _this.view.zoom_power = Math.min(Math.max(delta * 1 + _this.view.zoom_power, 1), 7);
-            _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
-            _this.view.zoom_scale = Math.min(Math.max(_this.view.zoom_scale, 1), 27);
-            //console.log(zoom_depth())
-            setTimeout(function(){
-                drag_graph(_this.view_wrap, true);
-                _this.render()
-            }, 100)
-        })
-        return _this;
-    }
-
-    _this.get_zooming_opacity = function (node_data) {
-        if (_this.topic_data.length){
-            if (_this.get_zoom_depth() !== node_data.level && node_data.level !== _this.config.max_depth) {
-                return 0.05
-            }
-            return 1;
-        }else{
-            if (_this.get_zoom_depth() !== node_data.depth && node_data.depth !== _this.config.max_depth) {
-                return 0.05
-            }
-            return 1;
-        }
-    }
-
-    _this.get_zoom_depth = function () {
-        var k = Math.log(_this.view.zoom_scale) / Math.log(_this.view.zoom_base);
-        return Math.ceil((k + 1) / 2) - 1;
-    };
-
-    _this.zoom_to_depth = function (depth, dx, dy) {
-        var dpower = (depth + 1) * 2 + 1;
-        if (-dx == _this.view.x && -dy == _this.view.y || dpower < _this.view.zoom_power) {
-            _this.view.zoom_power = (depth + 1) * 2 + 1;
-            _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
-            _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
-        }
-
-        _this.view.x = -dx;
-        _this.view.y = -dy;
-        drag_graph(_this.view_wrap, true);
-        _this.render();
-    };
 
     _this.show_cloud = function (topic_words) {
         var max = d3.max(topic_words, weight);
@@ -798,7 +780,10 @@ function add_ui(_this) {
         var prefix = "disassembled/topicsDocsDistrib";
         var suffix = trace.join("_"); //suffix used as key to trace topic objects
         //console.log(node_data.level ,i);
-        var path = _this.data_dir.length ?  _this.data_dir[node_data.level ] + prefix + suffix + ".json" : _this.data_dir + prefix + suffix + ".json";
+        //console.log(!!_this.data_dir.length)
+        var path = typeof _this.data_dir=="object"
+            ?  _this.data_dir[node_data.level] + prefix + suffix + ".json"
+            : _this.data_dir + prefix + suffix + ".json";
 
         _this.document_list_container.append("div")
             .attr("class", "loading")
