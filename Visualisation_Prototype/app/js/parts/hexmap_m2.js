@@ -30,7 +30,7 @@ function add_hexmap_model_2(_this) {
         // scale = scale - scale % m;
         var display_r = Math.pow(1 / 3, depth) * _this.config.hexagon_scale * _this.view.zoom_scale;
         //console.log(display_r)
-        var buffer_range = -display_r * 0.75// -_this.config.min_hex_r * 1 ;
+        var buffer_range = -display_r * 1// -_this.config.min_hex_r * 1 ;
 
         //var padding = -_this.config.min_hex_r * 1;
         var res = [];
@@ -66,7 +66,7 @@ function add_hexmap_model_2(_this) {
 
     var add_overview_map = function () {
         console.log("add overview")
-        _this.config.overview_padding = {top: 150, left: 150, bottom: 50, right: 50};
+        _this.config.overview_padding = {top: 150, left: 150, bottom: 150, right: 150};
         _this.display_overview = true;
 
         var container = _this.hexmap_container;
@@ -104,7 +104,7 @@ function add_hexmap_model_2(_this) {
         //console.log(dx, dy, "dxdy")
         var padding = _this.config.overview_padding;
 
-        var data = _this.hexmap_data[level];
+        //var data = _this.hexmap_data[level];
         var hexagons = _this.topic_data[level].data.hexagons;
         // console.log(data, hexagons)
 
@@ -228,6 +228,7 @@ function add_hexmap_model_2(_this) {
             //if mouse is on hexagon
             var x = mouse[0];
             var y = mouse[1];
+
             var rgba = ctx.getImageData(x, y, 1, 1).data;
             if (rgba[3] > 0) {
                 _this.overview_mouse_on_hexagon = true;
@@ -239,7 +240,7 @@ function add_hexmap_model_2(_this) {
 
 
             var min_dist = 9999999;
-
+            // console.log(x, y);
             var closest = -1;
             for (var i = 0; i < hexagons.length; i++) {
                 var hx = hexagons[i].absolute_x * scale * lvl_scale + ox;
@@ -255,20 +256,25 @@ function add_hexmap_model_2(_this) {
 
                 // all about hovered hexagon
                 //overview hexagon
-                var sm_x = hexagons[closest].absolute_x * scale * lvl_scale + ox
-                var sm_y = hexagons[closest].absolute_y * scale * lvl_scale + oy
+
+
+                //var sm_vertical_hex_offset = _this.config.hexagon_scale * scale * lvl_scale;
+                //var sm_horizontal_hex_offset = Math.sqrt(3) / 2 * sm_vertical_hex_offset;
+
+                var sm_x = hexagons[closest].absolute_x * scale * lvl_scale + ox// - sm_horizontal_hex_offset
+                var sm_y = hexagons[closest].absolute_y * scale * lvl_scale + oy// - sm_vertical_hex_offset;
 
                 //real view hexagon
-                var lm_x = hexagons[closest].absolute_x + _this.view.offsetx
-                var lm_y = hexagons[closest].absolute_y + _this.view.offsety
+                var lm_x = hexagons[closest].absolute_x * _this.view.zoom_scale * lvl_scale + _this.view.offsetx
+                var lm_y = hexagons[closest].absolute_y * _this.view.zoom_scale * lvl_scale + _this.view.offsety
 
                 var dx = lm_x - sm_x;
                 var dy = lm_y - sm_y;
 
 
-                console.log(sm_x, sm_y, "|", lm_x, lm_y)
-                _this.view.x = -dx * lvl_scale ;
-                _this.view.y = -dy * lvl_scale ;
+                //console.log(sm_x, sm_y, "|", lm_x, lm_y)
+                _this.view.x = -dx  / _this.view.zoom_scale;
+                _this.view.y = -dy  /_this.view.zoom_scale;
 
                 _this.drag_graph(_this.view_wrap, true);
                 _this.render();
@@ -366,6 +372,13 @@ function add_hexmap_model_2(_this) {
                     return d.pos
                 })
 
+            //exit
+            selection.exit()
+                .transition()
+                .duration(_this.config.transition_duration)
+                .style("opacity", 0)
+                .remove()
+
             //enter
             var polygon_wrap_enter = selection.enter().append("g")
                 .attr("class", "wrap-single-" + l)
@@ -430,12 +443,6 @@ function add_hexmap_model_2(_this) {
                 .style("opacity", _this.get_zooming_opacity(node_data))
 
 
-            //exit
-            selection.exit()
-                .transition()
-                .duration(_this.config.transition_duration)
-                .style("opacity", 0)
-                .remove()
 
 
         }

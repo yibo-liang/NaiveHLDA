@@ -19,7 +19,7 @@ function add_data_process_m2(_this) {
                     _this.topic_data[i] = d3.hierarchy(data, function (d) {
                         return d.submodels;
                     });
-                    console.log("topic data loaded", data);
+                    //console.log("topic data loaded", data);
                     _this.prepare_data(); //try prepare data
                     if (callback) callback(_this);
                 });
@@ -39,7 +39,7 @@ function add_data_process_m2(_this) {
                 var filename = filename_list[i];
                 d3.json(_this.data_dir[i] + filename, function (data) {
                     _this.hexmap_data[i] = data;
-                    console.log("hexmap data loaded", data)
+                    //console.log("hexmap data loaded", data)
                     _this.prepare_data(); //try prepare data
                     if (callback) callback(_this);
                 });
@@ -73,7 +73,7 @@ function add_data_process_m2(_this) {
         //console.log("node.data.topicClassesDistrib=", node.data.topicClassesDistrib)
         for (var l = 0; l < topic_data.length; l++) {
             var level_data = topic_data[l].data;
-            console.log("leveldata=", level_data)
+            //console.log("leveldata=", level_data)
             for (var i in level_data.topicClassesDistrib) {
                 var d = level_data.topicClassesDistrib[i];
                 var sum = 0;
@@ -89,7 +89,7 @@ function add_data_process_m2(_this) {
                 }
             }
         }
-        console.log(_this.topic_value_maximums)
+       // console.log(_this.topic_value_maximums)
 
 
     }
