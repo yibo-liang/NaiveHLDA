@@ -52,14 +52,15 @@ function add_data_process_m2(_this) {
 
     _this.load_compare_data = function (filename_list, callback) {
 
-        _this.data_count = filename_list.length;
         _this.compare_data = [];
         for (var i = 0; i < filename_list.length; i++) {
             (function (i) {
                 var filename = filename_list[i];
                 d3.json(_this.data_dir[i] + filename, function (data) {
                     _this.compare_data[i] = data;
-                    console.log("compare data loaded", data)
+                    //console.log("compare data loaded", data)
+
+                    _this.prepare_data(); //try prepare data
                     if (callback) callback(_this);
                 });
             })(i);
@@ -199,8 +200,12 @@ function add_data_process_m2(_this) {
         function allDataLoaded() {
             if (_this.data_count < 0) return false;
 
-            for (var i = 0; i < _this.data_count; i++) {
-                if (!_this.hexmap_data[i] || !_this.topic_data[i]) {
+            for (var i = 0; i <_this.data_count; i++) {
+                //console.log(i, _this.hexmap_data[i] , _this.topic_data[i] )
+                if (!_this.hexmap_data[i] || !_this.topic_data[i] ) {
+                    return false;
+                }
+                if (i<_this.data_count-1 && typeof _this.compare_data[i]=="undefined"){
                     return false;
                 }
             }
@@ -221,6 +226,7 @@ function add_data_process_m2(_this) {
                 }
 
                 for (var i = 0; i < topic_count; i++) {
+
                     var hex_coor = hexmap_data["hexmapData"][i].hexAggloCoord;
 
                     var x = hex_coor.x * _this.config.hexagon_scale;

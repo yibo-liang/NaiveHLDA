@@ -309,7 +309,7 @@ function add_single_hexagon_render(_this) {
 
     }
 
-    _this.draw_topic = function (container, node_data, d, i) {
+    _this.draw_topic = function (container, node_data, d, i, demo_only) {
 
 
         if (d.visible) {
@@ -331,10 +331,10 @@ function add_single_hexagon_render(_this) {
                 .attr("class", "data")
                 .style("opacity", 0)
 
-            if (_this.topic_search)
+            if (_this.topic_search && !demo_only)
                 _this.draw_query_distribution(data_group, i, node_data.data.query_result, node_data.depth);
             //console.log("draw pi i=", i)
-            if (!_this.topic_search)
+            if (!_this.topic_search && !demo_only)
                 _this.draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
 
 
@@ -367,8 +367,12 @@ function add_single_hexagon_render(_this) {
                 return occur;
             }
 
-
-            var texts = node_data.data.topics[i].sort(sort_topicwords).slice(0, 3);
+            if (!node_data.data.topics[i].sorted){
+                var texts = node_data.data.topics[i].sort(sort_topicwords).slice(0, 3);
+                node_data.data.topics[i].sorted=true;
+            }else{
+                var texts = node_data.data.topics[i].slice(0, 3);
+            }
             var visible_texts = texts
             // .sort(sort_topicwords)
             // .slice(0, 8)
@@ -403,7 +407,10 @@ function add_single_hexagon_render(_this) {
             data_group
                 .transition()
                 .duration(_this.config.transition_duration)
-                .style("opacity", _this.get_zooming_opacity(node_data))
+                .style("opacity", function () {
+                    if (demo_only) return 1;
+                    return _this.get_zooming_opacity(node_data)
+                })
 
             var cc = clickcancel();
             container.call(cc);
