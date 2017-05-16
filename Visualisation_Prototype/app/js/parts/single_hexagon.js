@@ -312,7 +312,8 @@ function add_single_hexagon_render(_this) {
     _this.draw_topic = function (container, node_data, d, i, demo_only) {
 
 
-        if (d.visible) {
+        if (d.visible || demo_only) {
+
             //draw polygon
             container.append("polygon")
                 .attr("points", hexagon_points(0, 0, 1 * _this.config.hexagon_scale))
@@ -322,6 +323,7 @@ function add_single_hexagon_render(_this) {
 
             //draw borders for toplevel
             if (node_data.depth == 0 || node_data.level) {
+                if (!demo_only)
                 draw_boarders(container, node_data, d.borders);
             }
 
@@ -336,7 +338,6 @@ function add_single_hexagon_render(_this) {
             //console.log("draw pi i=", i)
             if (!_this.topic_search && !demo_only)
                 _this.draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
-
 
             //get rid of dominating words,
             //a word is dominating if it occurs more than 3 times in sibliing topics
@@ -367,10 +368,10 @@ function add_single_hexagon_render(_this) {
                 return occur;
             }
 
-            if (!node_data.data.topics[i].sorted){
+            if (!node_data.data.topics[i].sorted) {
                 var texts = node_data.data.topics[i].sort(sort_topicwords).slice(0, 3);
-                node_data.data.topics[i].sorted=true;
-            }else{
+                node_data.data.topics[i].sorted = true;
+            } else {
                 var texts = node_data.data.topics[i].slice(0, 3);
             }
             var visible_texts = texts

@@ -125,6 +125,7 @@ function add_hexmap_model_2(_this) {
                     + " scale(" + shrink_scale + "," + shrink_scale + ")")
 
             container.each(function (d) {
+                console.log(d)
                 _this.draw_topic(container, d.data, d.hex, d.hex.pos, true);
 
             })
@@ -140,25 +141,35 @@ function add_hexmap_model_2(_this) {
         // sub topic hightlight
         if (select) {
 
-            function is_colliding(hex_a, hex_b) {
+            function distance(x1, y1, x2, y2) {
+                var dx = x1 - x2;
+                var dy = y1 - y2;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                return dist;
+            }
 
-
-                var lvl_scale = Math.pow(1 / 3, level+1);
-
+            function is_colliding(hex_a, hex_b, offset_a, offset_b) {
+                var ox1 = 0;
+                var oy1 = 0;
+                var ox2 = 0;
+                var oy2 = 0;
+                if (!!offset_a && !!offset_b) {
+                    ox1 = offset_a.x;
+                    oy1 = offset_a.y;
+                    ox2 = offset_b.x;
+                    oy2 = offset_b.y;
+                }
 
                 var min_dist = _this.config.hexagon_scale * 2;
 
-                function distance(x1, y1, x2, y2) {
-                    var dx = x1 - x2;
-                    var dy = y1 - y2;
-                    var dist = Math.sqrt(dx * dx + dy * dy);
-                    return dist;
-                }
 
-                var dist = distance(hex_a.x, hex_a.y, hex_b.x, hex_b.y);
-                console.log(dist)
-                if ( dist <= min_dist * 1.01) {
-                    console.log("close hex",hex_a.x, hex_a.y, hex_b.x, hex_b.y, dist)
+                var dist = distance(
+                    hex_a.x + ox1, hex_a.y + oy1,
+                    hex_b.x + ox2, hex_b.y + oy2
+                );
+
+                if (dist <= min_dist * 1.01) {
+                    //console.log("close hex",hex_a.x, hex_a.y, hex_b.x, hex_b.y, dist)
                     return true;
                 }
                 return false;
@@ -171,6 +182,40 @@ function add_hexmap_model_2(_this) {
                         var hex_a = cluster_a[a];
                         var hex_b = cluster_b[b];
                         if (is_colliding(hex_a, hex_b)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function is_cluster_colliding2(cluster_a, cluster_b) {
+                var offset_a = {
+                    x: cluster_a.offsetx,
+                    y: cluster_a.offsety
+                }
+                var offset_b = {
+                    x: cluster_b.offsetx,
+                    y: cluster_b.offsety
+                }
+                for (var a = 0; a < cluster_a.length; a++) {
+                    for (var b = 0; b < cluster_b.length; b++) {
+                        var hex_a = cluster_a[a];
+                        var hex_b = cluster_b[b];
+                        if (is_colliding(hex_a, hex_b, offset_a, offset_b)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function is_cluster_colliding_any(clusters, i) {
+                var cluster = clusters[i];
+                for (var k = 0; k < clusters.length; k++) {
+                    if (i !== k) {
+                        var another = clusters[k];
+                        if (is_cluster_colliding2(cluster, another)) {
                             return true;
                         }
                     }
@@ -195,9 +240,9 @@ function add_hexmap_model_2(_this) {
 
                     for (var i = 0; i < result_groups.length - 1; i++) {
                         for (var j = i + 1; j < result_groups.length; j++) {
-                            if (i!==j && is_cluster_colliding(result_groups[i], result_groups[j])) {
+                            if (i !== j && is_cluster_colliding(result_groups[i], result_groups[j])) {
                                 merged = true;
-                                result_groups[i]=result_groups[i].concat(result_groups[j]);
+                                result_groups[i] = result_groups[i].concat(result_groups[j]);
                                 result_groups.splice(j, 1);
                                 //console.log("merge ", i, " and ", j)
                                 break;
@@ -211,11 +256,92 @@ function add_hexmap_model_2(_this) {
 
             }
 
+            function pack_cluster(clusters) {
+                //centroid point of all and each of the clusters
+                var xsum_all = 0;
+                var ysum_all = 0;
+                var count = 0;
+                for (var i = 0; i < clusters.length; i++) {
+                    var cluster = clusters[i];
+
+                    var xsum = 0;
+                    var ysum = 0;
+
+                    for (var k = 0; k < cluster.length; k++) {
+                        var hex = cluster[k];
+                        xsum_all += hex.absolute_x;
+                        ysum_all += hex.absolute_y;
+                        xsum += hex.absolute_x;
+                        ysum += hex.absolute_y;
+                        count++;
+                    }
+                    cluster.finalised = false;
+                    cluster.offsetx = 0;
+                    cluster.offsety = 0;
+                    cluster.cx = xsum / cluster.length;
+                    cluster.cy = ysum / cluster.length;
+                }
+                var cx = xsum_all / count;
+                var cy = ysum_all / count;
+
+                //sort clusters by distance to centroid point
+                clusters = clusters.sort(function (a, b) {
+                    return distance(a.cx, a.cy, cx, cy) - distance(b.cx, b.cy, cx, cy);
+                })
+
+                //packing by moving one step at a time.
+                var step = 5;
+                var all_finalised = false;
+                var count = 0;
+                while (!all_finalised) {
+                    all_finalised = true;
+                    count++;
+                    for (var i = 0; i < clusters.length; i++) {
+                        var cluster = clusters[i];
+                        if (!cluster.finalised) {
+                            var dx = cluster.cx + cluster.offsetx - cx;
+                            var dy = cluster.cy + cluster.offsety - cy;
+                            var radian = Math.atan2(dy, dx);
+
+                            step = Math.sqrt(dx * dx + dy * dy) / 20;
+                            step = step > 10 ? 10 : step;
+                            if (step < 0.5) {
+                                cluster.finalised = true;
+                                break;
+                            }
+
+                            var stepx = step * Math.cos(radian)
+                            var stepy = step * Math.sin(radian)
+
+                            cluster.offsetx -= stepx;
+                            cluster.offsety -= stepy;
+
+                            if (is_cluster_colliding_any(clusters, i)) {
+                                //revert if step causes collision, and finalise it
+                                cluster.offsetx += stepx;
+                                cluster.offsety += stepy;
+                                cluster.finalised = true;
+                            }
+
+                        }
+                        all_finalised = all_finalised && cluster.finalised;
+
+                    }
+                }
+                console.log("Packing finished after ", count, " iterations")
+
+
+            }
+
 
             var num_topics = 10;
 
+            var padding = _this.overview.padding;
+            var ox = padding.left + (_this.config.width - padding.right - padding.left) / 2;
+            var oy = padding.top + (_this.config.height - padding.bottom - padding.top) / 2;
+
             if (!_this.overview.subtopics || _this.overview.level !== level) {
-                //render once for level
+                //render once for level unless something changed
                 console.log("render sub topic overview hightlight")
 
                 var subtopic_similarity = _this.compare_data[level][parseInt(select.hex.topic_id)];
@@ -228,37 +354,142 @@ function add_hexmap_model_2(_this) {
                 }).slice(0, num_topics);
                 _this.overview.level = level;
 
-                var ox = padding.left + (_this.config.width - padding.right - padding.left) / 2;
-                var oy = padding.top + (_this.config.height - padding.bottom - padding.top) / 2;
+
+                var scale = _this.overview.scale;
+                var lvl_scale = Math.pow(1 / 3, level + 1);
+                var overall_scale = scale * lvl_scale;
+
                 var hexagons = _this.topic_data[level + 1].data.hexagons;
 
-                console.log(hexagons)
                 var sub_topic_hexagons = [];
-                // for (var i = 0; i < hexagons.length; i++) {
-                //     var id = parseInt(hexagons[i].topic_id);
-                //     console.log(id)
-                //     for(var j=0;j<_this.overview.subtopics.length;j++){
-                //         if (id === _this.overview.subtopics[j].id){
-                //             sub_topic_hexagons.push(hexagons[i]);
-                //             break;
-                //         }
-                //     }
-                //
-                // }
 
                 for (var i = 0; i < _this.overview.subtopics.length; i++) {
                     var id = _this.overview.subtopics[i].id;
-                    console.log(id, hexagons[id]);
                     sub_topic_hexagons.push(hexagons[id]);
                 }
 
-
-                console.log(sub_topic_hexagons)
                 var clusters = clustering_subtopics(sub_topic_hexagons);
-                console.log(clusters)
+                pack_cluster(clusters);
 
+                _this.overview.subtopic_clusters = clusters;
+
+                console.log(clusters);
+                var subtopic_container = _this.overview.supertopic_container
+                    .append("g")
+                    .attr("class", "subtopics")
+                    .style("transform", function () {
+
+                        var str = "translate(" + ox + "px," + oy + "px) "
+                            + "scale(" + overall_scale + "," + overall_scale + ")";
+                        console.log(str)
+                        return str;
+                    })
+
+                var cluster_enter = subtopic_container
+                    .selectAll("g.subtopic-cluster")
+                    .data(clusters)
+                    .enter()
+                    .append("g")
+                    .attr("class", "subtopic-cluster")
+
+                cluster_enter.each(function (d, i) {
+                    console.log(d);
+                    d3.select(this).selectAll("g.subtopic-hex")
+                        .data(d)
+                        .enter()
+                        .append("g")
+                        .attr("class", "subtopic-hex")
+                        .style("transform", function (d) {
+                            return "translate(" + d.absolute_x + "px," + d.absolute_y + "px)"
+                        })
+                        .each(function (x, k) {
+                            var data = _this.topic_data[level + 1];
+                            x.visible = true;
+                            _this.draw_topic(d3.select(this), data, x, x.pos, false);
+                        })
+                })
+
+                function clusters_boundary(clusters) {
+                    var min_x = 99999;
+                    var min_y = 99999;
+                    var max_x = -99999;
+                    var max_y = -99999;
+
+                    for (var i = 0; i < clusters.length; i++) {
+                        var cluster = clusters[i];
+                        var offsetx = cluster.offsetx;
+                        var offsety = cluster.offsety;
+                        console.log("offsets ", offsetx, offsety)
+                        for (var k = 0; k < cluster.length; k++) {
+                            var hex = cluster[k];
+                            var x = hex.absolute_x + offsetx;
+                            var y = hex.absolute_y + offsety;
+                            if (x > max_x) max_x = x;
+                            if (x < min_x) min_x = x;
+                            if (y > max_y) max_y = y;
+                            if (y < min_y) min_y = y;
+                        }
+                    }
+                    return {
+                        x: min_x,
+                        y: min_y,
+                        width: max_x - min_x,
+                        height: max_y - min_y
+                    }
+                }
+
+                var boundary = clusters_boundary(_this.overview.subtopic_clusters)
+
+                var dx = boundary.width;
+                var dy = boundary.height;
+
+                var padding = _this.overview.padding;
+                var subtopic_scale = Math.min(
+                    (_this.config.height - padding.top - padding.bottom) / dy,
+                    (_this.config.width - padding.left - padding.right) / dx
+                );
+
+                var absolute_w = dx * subtopic_scale;
+                var absolute_h = dy * subtopic_scale;
+                console.log(boundary)
+                //update with packing animation
+                d3.select("g.subtopics")
+                    .transition()
+                    .delay(_this.config.transition_duration * 4)
+                    .duration(_this.config.transition_duration * 2)
+                    .style("transform", function () {
+                        var str = "translate(" + (( -boundary.x) + (_this.config.width - boundary.width) / 2) + "px,"
+                            + ((-boundary.y ) + (_this.config.height - boundary.height) / 2) + "px) "
+                            + "scale(" + subtopic_scale + "," + subtopic_scale + ")";
+                        console.log("enlarge " + str);
+                        return str;
+                    })
+
+                d3.select("g.subtopics")
+                    .selectAll("g.subtopic-cluster")
+                    .data(_this.overview.subtopic_clusters)
+                    .transition()
+                    .delay(_this.config.transition_duration * 4)
+                    .duration(_this.config.transition_duration * 2)
+                    .style("transform", function (d) {
+                        return "translate(" + d.offsetx + "px," + d.offsety + "px)";
+                    })
 
             }
+
+            //update pie chart for the selection of subtopics
+            _this.overview.supertopic_container
+                .selectAll("g.subtopic-hex")
+                .each(function (d, i) {
+                    //console.log("d=",d);
+                    var node_data = _this.topic_data[level + 1];
+                    _this.draw_pie_in_group(
+                        d3.select(this),
+                        node_data.data.topicClassesDistrib[d.pos],
+                        node_data.data.topicClassesDistrib,
+                        node_data.depth
+                    )
+                })
 
 
         }
@@ -282,22 +513,25 @@ function add_hexmap_model_2(_this) {
         //console.log(level, _this.get_zoom_depth())
         if (level == 0 || level !== _this.get_zoom_depth()) return;
 
+        var dx = (_this.boundary_box.max_x - _this.boundary_box.min_x);
+        var dy = (_this.boundary_box.max_y - _this.boundary_box.min_y);
+
+        var padding = _this.overview.padding;
+        var scale = Math.min(
+            (_this.config.height - padding.top - padding.bottom) / dy,
+            (_this.config.width - padding.left - padding.right) / dx
+        );
+
+        _this.overview.scale = scale;
 
         render_supertopic_overview(level - 1);
 
-        var dx = (_this.boundary_box.max_x - _this.boundary_box.min_x);
-        var dy = (_this.boundary_box.max_y - _this.boundary_box.min_y);
         //console.log(dx, dy, "dxdy")
-        var padding = _this.overview.padding;
 
         //var data = _this.hexmap_data[level];
         var hexagons = _this.topic_data[level].data.hexagons;
         // console.log(data, hexagons)
 
-        var scale = Math.min(
-            (_this.config.height - padding.top - padding.bottom) / dy,
-            (_this.config.width - padding.left - padding.right) / dx
-        );
 
         var lvl_scale = Math.pow(1 / 3, level);
         var canvas = _this.overview.map._groups[0][0];
@@ -348,27 +582,27 @@ function add_hexmap_model_2(_this) {
         }
 
         //draw selected subtopics
-        if(_this.overview.subtopics)
-        for (var i = 0; i < _this.overview.subtopics.length; i++) {
-            var id = _this.overview.subtopics[i].id;
-            var sub_topic_hexagon = (hexagons[id]);
-            ctx.beginPath();
-            ctx.fillStyle = "rgba(255,1,1,0.15)";
-            var r = 0.5 / 6 * Math.PI * 2;
-            var x = sub_topic_hexagon.absolute_x * scale * lvl_scale + m_hex_r * Math.cos(r) + ox;
-            var y = sub_topic_hexagon.absolute_y * scale * lvl_scale + m_hex_r * Math.sin(r) + oy;
-            ctx.moveTo(x, y)
-            for (var j = 1; j < 6; j++) {
-
-                var r = (j + .5) / 6 * Math.PI * 2;
+        if (_this.overview.subtopics)
+            for (var i = 0; i < _this.overview.subtopics.length; i++) {
+                var id = _this.overview.subtopics[i].id;
+                var sub_topic_hexagon = (hexagons[id]);
+                ctx.beginPath();
+                ctx.fillStyle = "rgba(255,1,1,0.15)";
+                var r = 0.5 / 6 * Math.PI * 2;
                 var x = sub_topic_hexagon.absolute_x * scale * lvl_scale + m_hex_r * Math.cos(r) + ox;
                 var y = sub_topic_hexagon.absolute_y * scale * lvl_scale + m_hex_r * Math.sin(r) + oy;
-                ctx.lineTo(x, y);
+                ctx.moveTo(x, y)
+                for (var j = 1; j < 6; j++) {
+
+                    var r = (j + .5) / 6 * Math.PI * 2;
+                    var x = sub_topic_hexagon.absolute_x * scale * lvl_scale + m_hex_r * Math.cos(r) + ox;
+                    var y = sub_topic_hexagon.absolute_y * scale * lvl_scale + m_hex_r * Math.sin(r) + oy;
+                    ctx.lineTo(x, y);
+                }
+                // console.log("----------")
+                ctx.closePath();
+                ctx.fill();
             }
-            // console.log("----------")
-            ctx.closePath();
-            ctx.fill();
-        }
 
         function draw_line(ctx, x1, y1, x2, y2) {
             //console.log(x1, y1, x2, y2);
