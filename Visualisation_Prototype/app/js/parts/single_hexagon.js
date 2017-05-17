@@ -309,10 +309,10 @@ function add_single_hexagon_render(_this) {
 
     }
 
-    _this.draw_topic = function (container, node_data, d, i, demo_only) {
+    _this.draw_topic = function (container, node_data, d, i, visible, highlight) {
 
 
-        if (d.visible || demo_only) {
+        if (d.visible || visible) {
 
             //draw polygon
             container.append("polygon")
@@ -323,8 +323,8 @@ function add_single_hexagon_render(_this) {
 
             //draw borders for toplevel
             if (node_data.depth == 0 || node_data.level) {
-                if (!demo_only)
-                draw_boarders(container, node_data, d.borders);
+                if (!highlight)
+                    draw_boarders(container, node_data, d.borders);
             }
 
             //draw pie
@@ -333,10 +333,10 @@ function add_single_hexagon_render(_this) {
                 .attr("class", "data")
                 .style("opacity", 0)
 
-            if (_this.topic_search && !demo_only)
+            if (_this.topic_search && !visible)
                 _this.draw_query_distribution(data_group, i, node_data.data.query_result, node_data.depth);
             //console.log("draw pi i=", i)
-            if (!_this.topic_search && !demo_only)
+            if (!_this.topic_search && !visible || highlight)
                 _this.draw_pie_in_group(data_group, node_data.data.topicClassesDistrib[i], node_data.data.topicClassesDistrib, node_data.depth);
 
             //get rid of dominating words,
@@ -409,7 +409,7 @@ function add_single_hexagon_render(_this) {
                 .transition()
                 .duration(_this.config.transition_duration)
                 .style("opacity", function () {
-                    if (demo_only) return 1;
+                    if (visible) return 1;
                     return _this.get_zooming_opacity(node_data)
                 })
 

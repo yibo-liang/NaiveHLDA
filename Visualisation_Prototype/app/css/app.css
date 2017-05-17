@@ -289,7 +289,6 @@ canvas.overview{
 }
 
 div.overview-supertopic-container{
-    pointer-events: none;
     position: absolute;
     top:0;
     left:0;

@@ -10,7 +10,7 @@ function add_zooming_m2(_this) {
             _this.mousewheel_delta += delta;
             //console.log(zoom_depth())
             setTimeout(function () {
-                if (_this.mousewheel_delta > 3) _this.mousewheel_delta = 1;
+                if (_this.mousewheel_delta > 3) _this.mousewheel_delta = 3;
                 _this.view.zoom_power = Math.min(Math.max(_this.mousewheel_delta * 0.5 + _this.view.zoom_power, 1), 7);
                 _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
                 _this.view.zoom_scale = Math.min(Math.max(_this.view.zoom_scale, 1), 27);
