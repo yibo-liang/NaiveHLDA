@@ -89,8 +89,10 @@ function add_hexmap_model_2(_this) {
                 _this.overview.container.append("div").attr("class", "overview-supertopic-container")
                     .append("svg")
                     .attr("class", "overview-supertopic-svg")
+                    .attr("id", "overview_supertopic_svg")
                     .attr("width", _this.config.width + "px")
                     .attr("height", _this.config.height + "px");
+
 
             //transparent background for hide popup subtopics
             _this.overview.supertopic_container_background = _this.overview.supertopic_container
@@ -109,7 +111,6 @@ function add_hexmap_model_2(_this) {
     var render_supertopic_overview = function (level) {
 
 
-
         var shrink_scale = 0.75;
         var select = _this.view.selected_hex;
 
@@ -126,7 +127,9 @@ function add_hexmap_model_2(_this) {
 
             var enter = _this.overview.supertopic_container
                 .selectAll("g.super-topic-container")
-                .data(data)
+                .data(data, function (d) {
+                    return d.hex.topic_id;
+                })
                 .enter()
 
             var padding = _this.config.hexagon_scale * shrink_scale;
@@ -137,16 +140,28 @@ function add_hexmap_model_2(_this) {
                     + " scale(" + shrink_scale + "," + shrink_scale + ")")
 
             container.each(function (d) {
-                console.log(d)
-                _this.draw_topic(container, d.data, d.hex, d.hex.pos, true);
+                _this.draw_topic(
+                    container, d.data, d.hex, d.hex.pos, true, false,
+                    {
+                        dbclick: function (d, node_data, i) {
+
+                        },
+                        click: function (d, node_data, i) {
+
+                        }
+                    }
+                )
 
             })
 
-            var update = _this.overview.container
-                .selectAll("div.super-topic-container")
-                .data(data);
+            var update = _this.overview.supertopic_container
+                .selectAll("g.super-topic-container")
+                .data(data, function (d) {
+                    return d.hex.topic_id;
+                })
 
-            update.exit()
+            update
+                .exit()
                 .remove();
         }
 
@@ -371,7 +386,7 @@ function add_hexmap_model_2(_this) {
 
                     }
                 }
-                console.log("Packing finished after ", count, " iterations")
+                //console.log("Packing finished after ", count, " iterations")
 
 
             }
@@ -407,7 +422,7 @@ function add_hexmap_model_2(_this) {
                     cluster.offsetx += -min_x;
                     cluster.offsety += -min_y
 
-
+                    cluster.i = level + "-" + i;
                 }
 
                 return {
@@ -423,7 +438,7 @@ function add_hexmap_model_2(_this) {
             var padding = _this.overview.padding;
             var ox = padding.left + (_this.config.width - padding.right - padding.left) / 2;
             var oy = padding.top + (_this.config.height - padding.bottom - padding.top) / 2;
-
+            console.log("render select lvl", level)
             if (!_this.overview.subtopics || _this.overview.level !== level) {
                 //render once for level unless something changed
                 console.log("render sub topic overview hightlight")
@@ -436,7 +451,6 @@ function add_hexmap_model_2(_this) {
                 _this.overview.subtopics = subtopics.sort(function (a, b) {
                     return b.value - a.value;
                 }).slice(0, num_topics);
-                _this.overview.level = level;
 
 
                 var scale = _this.overview.scale;
@@ -459,26 +473,42 @@ function add_hexmap_model_2(_this) {
                 _this.overview.subtopic_clusters = clusters;
                 _this.overview.subtopic_boundary = boundary;
 
-                console.log(clusters);
-                var subtopic_container = _this.overview.supertopic_container
-                    .append("g")
-                    .attr("class", "subtopics")
-                    .style("transform", function () {
-                        var str = "translate(" + ox + "px," + oy + "px) "
-                            + "scale(" + overall_scale + "," + overall_scale + ")";
-                        console.log(str)
-                        return str;
-                    })
+                //console.log("popup overval scale enter", overall_scale);
+                var subtopic_container;
+                if (!_this.overview.subtopic_container) {
+                    subtopic_container = _this.overview.supertopic_container
+                        .append("g")
+                        .attr("class", "subtopics")
+                        .style("transform", function () {
+                            var str = "translate(" + ox + "px," + oy + "px) "
+                                + "scale(" + overall_scale + "," + overall_scale + ")";
+                            return str;
+                        })
+                    _this.overview.subtopic_container = subtopic_container;
+                } else {
+                    subtopic_container = _this.overview.subtopic_container;
+                    if (_this.overview.level !== level){
+                        lvl_scale = Math.pow(1 / 3, level + 1);
+                        overall_scale = scale * lvl_scale;
+                        subtopic_container
+                            .style("transform", function () {
+                                var str = "translate(" + ox + "px," + oy + "px) "
+                                    + "scale(" + overall_scale + "," + overall_scale + ")";
+                                return str;
+                            })
+                    }
+                }
 
                 var cluster_enter = subtopic_container
                     .selectAll("g.subtopic-cluster")
-                    .data(clusters)
+                    .data(clusters, function (d) {
+                        return d.i;
+                    })
                     .enter()
                     .append("g")
                     .attr("class", "subtopic-cluster")
 
                 cluster_enter.each(function (d, i) {
-                    console.log(d);
                     d3.select(this).selectAll("g.subtopic-hex")
                         .data(d)
                         .enter()
@@ -490,9 +520,33 @@ function add_hexmap_model_2(_this) {
                         .each(function (x, k) {
                             var data = _this.topic_data[level + 1];
                             x.visible = true;
-                            _this.draw_topic(d3.select(this), data, x, x.pos, false, true);
+                            _this.draw_topic(
+                                d3.select(this), data, x, x.pos,
+                                false, true,
+                                {
+                                    dbclick: function (d, node_data, i) {
+
+                                    },
+                                    click: function (d, node_data, i) {
+
+                                    }
+                                });
                         })
                 })
+
+                var cluster_update = subtopic_container
+                    .selectAll("g.subtopic-cluster")
+                    .data(clusters, function (d) {
+
+                        return d.i;
+                    })
+
+                cluster_update
+                    .exit()
+                    .each(function (d) {
+                        console.log("exit d",d.i)
+                    })
+                    .remove()
 
 
             } //update with packing animation
@@ -516,8 +570,8 @@ function add_hexmap_model_2(_this) {
                     d3.select("g.subtopics")
                         .transition()
                         .ease(d3.easeLinear)
-                        .delay(_this.config.transition_duration * 3)
-                        .duration(_this.config.transition_duration * 2)
+                        .delay(_this.config.transition_duration * 2)
+                        .duration(_this.config.transition_duration * 1)
                         .style("transform", function () {
                             var tempx = (_this.config.width - boundary.width * subtopic_scale ) / 2;
                             var tempy = (_this.config.height - boundary.height * subtopic_scale ) / 2;
@@ -531,18 +585,21 @@ function add_hexmap_model_2(_this) {
                     d3.select("g.subtopics")
                         .selectAll("g.subtopic-cluster")
                         .data(_this.overview.subtopic_clusters)
+                        .style("pointer-events", "initial")
                         .transition()
                         .ease(d3.easeLinear)
-                        .delay(_this.config.transition_duration * 3)
-                        .duration(_this.config.transition_duration * 2)
+                        .delay(_this.config.transition_duration * 2)
+                        .duration(_this.config.transition_duration * 1)
                         .style("transform", function (d) {
                             return "translate(" + d.offsetx + "px," + d.offsety + "px)";
                         })
                 } else {
+
+                    //console.log("popup overval scale update", overall_scale);
                     d3.select("g.subtopics")
                         .transition()
                         .ease(d3.easeLinear)
-                        .duration(_this.config.transition_duration * 2)
+                        .duration(_this.config.transition_duration * 1)
                         .style("transform", function () {
 
                             var str = "translate(" + ox + "px," + oy + "px) "
@@ -555,7 +612,7 @@ function add_hexmap_model_2(_this) {
 
                     update.transition()
                         .ease(d3.easeLinear)
-                        .duration(_this.config.transition_duration * 2)
+                        .duration(_this.config.transition_duration * 1)
                         .style("transform", function (d) {
                             return "translate(" + 0 + "px," + 0 + "px)";
                         })
@@ -751,17 +808,57 @@ function add_hexmap_model_2(_this) {
             return dx * dx + dy * dy;
         }
 
+
+        var zoomin = function () {
+            if (!_this.overview.popup_subtopics) {
+                _this.overview.popup_subtopics = true;
+            } else {
+                var lvl = _this.get_zoom_depth();
+                if (!_this.overview.subtopics || _this.overview.level !== lvl) {
+                    _this.overview.subtopics = null;
+                }
+                _this.view.zoom_power = (_this.get_zoom_depth() + 1) * 2 + 1;
+                _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
+                _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
+                _this.overview.popup_subtopics = true;
+                _this.drag_graph(_this.view_wrap, true);
+                _this.render()
+
+            }
+        }
+
+        var zoomout = function () {
+            console.log("zoomout")
+            if (!_this.overview.popup_subtopics || !_this.view.selected_hex) {
+                _this.overview.subtopics = null;
+
+
+                _this.view.zoom_power = (_this.get_zoom_depth() - 1) * 2 + 1;
+                _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
+                _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
+                _this.overview.popup_subtopics = true;
+                _this.drag_graph(_this.view_wrap, true);
+                _this.render()
+            } else if (_this.overview.popup_subtopics) {
+                _this.overview.popup_subtopics = false;
+            }
+        }
+
         var click = function () {
-            console.log("go back to upper level")
+
             var hex_id = _this.hover_overview_hexagon_id;
-            if (!hex_id && !_this.overview.popup_subtopics) {
-                _this.zoom_to_depth(_this.topic_data[_this.get_zoom_depth() - 1])
-                return;
+            if (!hex_id) {
+                zoomout();
             }
 
         }
 
         var mousemove = function () {
+            if (_this.overview.popup_subtopics) {
+                //no reaction if subtopics are poped up
+                return;
+            }
+
             var mouse = d3.mouse(this);
             //if mouse is on hexagon
             var x = mouse[0];
@@ -819,13 +916,28 @@ function add_hexmap_model_2(_this) {
 
 
         _this.overview.supertopic_container_background
-            .on("mousemove",mousemove)
+            .on("mousemove", mousemove)
             .on("click", function () {
-                _this.overview.popup_subtopics = false;
-                console.log("ffff")
                 click();
                 _this.render();
             })
+
+
+        //mouse wheel
+        bind_mousewheel("overview_supertopic_svg", function (delta) {
+
+            _this.mousewheel_delta += delta;
+            console.log("delta=", delta)
+            setTimeout(function () {
+                if (_this.mousewheel_delta < 0) {
+                    zoomout();
+                } else if (_this.mousewheel_delta > 0) {
+                    zoomin();
+                }
+                _this.render();
+                _this.mousewheel_delta = 0;
+            }, 50)
+        })
 
     }
 

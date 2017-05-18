@@ -309,7 +309,7 @@ function add_single_hexagon_render(_this) {
 
     }
 
-    _this.draw_topic = function (container, node_data, d, i, visible, highlight) {
+    _this.draw_topic = function (container, node_data, d, i, visible, highlight, click_callbacks) {
 
 
         if (d.visible || visible) {
@@ -414,29 +414,44 @@ function add_single_hexagon_render(_this) {
                 })
 
             var cc = clickcancel();
+
+            var default_dbclick = function (d, nodedata, i) {
+                //console.log("click dpth = " , node_data);
+                _this.show_cloud(node_data.data.topics[i]);
+                _this.view.selected_hex = {
+                    data: node_data,
+                    hex: d
+                }
+
+                _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
+            }
+
+            var default_click = function (d, nodedata, i) {
+                _this.show_cloud(node_data.data.topics[i]);
+                //console.log(node_data, _this.get_zooming_opacity(node_data))
+                _this.view.selected_hex = {
+                    data: node_data,
+                    hex: d
+                }
+
+                //console.log(node_data.data.topicClassesDistrib[i], i)
+                _this.display_file_list(node_data, i);
+                _this.render();
+            }
+
+
+            if (click_callbacks) {
+                default_click = click_callbacks.click;
+                default_dbclick = click_callbacks.dbclick;
+            }
+
             container.call(cc);
             cc
                 .on("dblclick", function () {
-                    //console.log("click dpth = " , node_data);
-                    _this.show_cloud(node_data.data.topics[i]);
-                    _this.view.selected_hex = {
-                        data: node_data,
-                        hex: d
-                    }
-
-                    _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
+                    default_dbclick(d, node_data, i);
                 })
                 .on("click", function () {
-                    _this.show_cloud(node_data.data.topics[i]);
-                    //console.log(node_data, _this.get_zooming_opacity(node_data))
-                    _this.view.selected_hex = {
-                        data: node_data,
-                        hex: d
-                    }
-
-                    //console.log(node_data.data.topicClassesDistrib[i], i)
-                    _this.display_file_list(node_data, i);
-                    _this.render();
+                    default_click(d, node_data, i);
                 })
         }
 

@@ -17,18 +17,26 @@ function moushwheel_event_handler(e, callback) {
 function bind_mousewheel(dom_id, MouseWheelHandler) {
     var dom = document.getElementById(dom_id);
 
-    var dummy = function (e) {
-        moushwheel_event_handler(e, MouseWheelHandler);
+    if (!dom.MouseWheelHandler){
+
+        dom.MouseWheelHandler = function (e) {
+            moushwheel_event_handler(e, MouseWheelHandler);
+        }
+
+        if (dom.addEventListener) {
+            // IE9, Chrome, Safari, Opera
+            dom.addEventListener("mousewheel", dom.MouseWheelHandler, false);
+            // Firefox
+            dom.addEventListener("DOMMouseScroll", dom.MouseWheelHandler, false);
+        }
+// IE 6/7/8
+        else dom.attachEvent("onmousewheel", dom.MouseWheelHandler);
+    }else{
+        dom.MouseWheelHandler = function (e) {
+            moushwheel_event_handler(e, MouseWheelHandler);
+        }
     }
 
-    if (dom.addEventListener) {
-        // IE9, Chrome, Safari, Opera
-        dom.addEventListener("mousewheel", dummy, false);
-        // Firefox
-        dom.addEventListener("DOMMouseScroll", dummy, false);
-    }
-// IE 6/7/8
-    else dom.attachEvent("onmousewheel", dummy);
 }
 
 

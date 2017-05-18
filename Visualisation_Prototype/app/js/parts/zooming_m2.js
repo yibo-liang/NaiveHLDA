@@ -5,7 +5,7 @@
 function add_zooming_m2(_this) {
 
     _this.enable_zooming = function () {
-        _this.mousewheel_delta=0;
+        _this.mousewheel_delta = 0;
         bind_mousewheel("hex_svg", function (delta) {
             _this.mousewheel_delta += delta;
             //console.log(zoom_depth())
@@ -16,7 +16,7 @@ function add_zooming_m2(_this) {
                 _this.view.zoom_scale = Math.min(Math.max(_this.view.zoom_scale, 1), 27);
                 _this.drag_graph(_this.view_wrap, true);
                 _this.render()
-                _this.mousewheel_delta=0;
+                _this.mousewheel_delta = 0;
             }, 1)
         })
         return _this;
@@ -45,6 +45,7 @@ function add_zooming_m2(_this) {
         var k = Math.log(_this.view.zoom_scale) / Math.log(_this.view.zoom_base);
         var result = Math.ceil((k + 1) / 2) - 1;
         //console.log(result);
+        if (result > 2) result = 2;
         return result;
     };
 
