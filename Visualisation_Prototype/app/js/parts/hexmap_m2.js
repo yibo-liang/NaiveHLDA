@@ -7,6 +7,59 @@
 
 function add_hexmap_model_2(_this) {
 
+    _this.view.selected_hex_at_level = [];
+    _this.zooming_states = {
+        current: "s0",
+        s0: function () {
+            _this.overview.subtopics = null;
+            _this.overview.popup_subtopics = true;
+            _this.overview.level = 0;
+            _this.set_zoom_depth(0)
+            console.log(_this.get_zoom_depth())
+        },
+        s1a: function () {
+            _this.overview.popup_subtopics = false;
+            _this.set_zoom_depth(1)
+            _this.overview.level = 1;
+            console.log(_this.get_zoom_depth())
+            d3.select("g.subtopics")
+                .selectAll("g.subtopic-cluster")
+                .style("pointer-events", "none")
+        },
+        s1b: function () {
+            _this.overview.popup_subtopics = true;
+            _this.hover_overview_hexagon_id = null;
+            _this.overview.level = 1;
+            _this.set_zoom_depth(1)
+            console.log(_this.get_zoom_depth())
+
+            d3.select("g.subtopics")
+                .selectAll("g.subtopic-cluster")
+                .style("pointer-events", "auto")
+        },
+        s2a: function () {
+            _this.overview.popup_subtopics = false;
+            _this.overview.level = 2;
+            _this.set_zoom_depth(2)
+            console.log(_this.get_zoom_depth())
+
+            d3.select("g.subtopics")
+                .selectAll("g.subtopic-cluster")
+                .style("pointer-events", "none")
+        },
+        s2b: function () {
+            _this.overview.popup_subtopics = true;
+            _this.hover_overview_hexagon_id = null;
+            _this.overview.level = 2;
+            _this.set_zoom_depth(2)
+            console.log(_this.get_zoom_depth())
+
+            d3.select("g.subtopics")
+                .selectAll("g.subtopic-cluster")
+                .style("pointer-events", "auto")
+        }
+    }
+
     var switch_pie_display = function (container, node_data, d, i) {
         container.selectAll(".arc").style("display",
             function () {
@@ -108,66 +161,11 @@ function add_hexmap_model_2(_this) {
     }
 
 
-    var render_supertopic_overview = function (level) {
+    var render_subtopic_popup = function (level) {
 
-
-        var shrink_scale = 0.75;
-        var select = _this.view.selected_hex;
-
-        var data;
-
-
-        // Title on left corner
-        {
-            if (select) {
-                data = [select];
-            } else {
-                data = [];
-            }
-
-            var enter = _this.overview.supertopic_container
-                .selectAll("g.super-topic-container")
-                .data(data, function (d) {
-                    return d.hex.topic_id;
-                })
-                .enter()
-
-            var padding = _this.config.hexagon_scale * shrink_scale;
-
-            var container = enter.append("g")
-                .attr("class", "super-topic-container")
-                .style("transform", "translate(" + padding + "px," + padding + "px)"
-                    + " scale(" + shrink_scale + "," + shrink_scale + ")")
-
-            container.each(function (d) {
-                _this.draw_topic(
-                    container, d.data, d.hex, d.hex.pos, true, false,
-                    {
-                        dbclick: function (d, node_data, i) {
-
-                        },
-                        click: function (d, node_data, i) {
-
-                        }
-                    }
-                )
-
-            })
-
-            var update = _this.overview.supertopic_container
-                .selectAll("g.super-topic-container")
-                .data(data, function (d) {
-                    return d.hex.topic_id;
-                })
-
-            update
-                .exit()
-                .remove();
-        }
-
-        // sub topic hightlight
+        var select = _this.view.selected_hex_at_level[level];
         if (select) {
-
+            console.log(select, level)
             function distance(x1, y1, x2, y2) {
                 var dx = x1 - x2;
                 var dy = y1 - y2;
@@ -422,7 +420,7 @@ function add_hexmap_model_2(_this) {
                     cluster.offsetx += -min_x;
                     cluster.offsety += -min_y
 
-                    cluster.i = level + "-" + i;
+                    cluster.i = (+new Date()) + level + "-" + i;
                 }
 
                 return {
@@ -438,8 +436,8 @@ function add_hexmap_model_2(_this) {
             var padding = _this.overview.padding;
             var ox = padding.left + (_this.config.width - padding.right - padding.left) / 2;
             var oy = padding.top + (_this.config.height - padding.bottom - padding.top) / 2;
-            console.log("render select lvl", level)
-            if (!_this.overview.subtopics || _this.overview.level !== level) {
+            console.log("render select lvl", level, _this.overview.level)
+            if (!_this.overview.subtopics || _this.overview.level !== level + 1) {
                 //render once for level unless something changed
                 console.log("render sub topic overview hightlight")
 
@@ -487,10 +485,14 @@ function add_hexmap_model_2(_this) {
                     _this.overview.subtopic_container = subtopic_container;
                 } else {
                     subtopic_container = _this.overview.subtopic_container;
-                    if (_this.overview.level !== level){
+                    if (_this.overview.level !== level) {
                         lvl_scale = Math.pow(1 / 3, level + 1);
                         overall_scale = scale * lvl_scale;
                         subtopic_container
+                            .transition()
+                            .ease(d3.easeLinear)
+                            .delay(_this.config.transition_duration * 1)
+                            .duration(_this.config.transition_duration * 1)
                             .style("transform", function () {
                                 var str = "translate(" + ox + "px," + oy + "px) "
                                     + "scale(" + overall_scale + "," + overall_scale + ")";
@@ -525,27 +527,44 @@ function add_hexmap_model_2(_this) {
                                 false, true,
                                 {
                                     dbclick: function (d, node_data, i) {
+                                        //console.log("click dpth = " , node_data);
+                                        _this.show_cloud(node_data.data.topics[i]);
+                                        _this.view.selected_hex = {
+                                            data: node_data,
+                                            hex: d
+                                        }
+                                        _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
 
-                                    },
-                                    click: function (d, node_data, i) {
-
+                                        _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
                                     }
-                                });
+                                    ,
+                                    click: function (d, node_data, i) {
+                                        _this.show_cloud(node_data.data.topics[i]);
+                                        //console.log(node_data, _this.get_zooming_opacity(node_data))
+                                        _this.view.selected_hex = {
+                                            data: node_data,
+                                            hex: d
+                                        }
+                                        _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
+
+                                        //console.log(node_data.data.topicClassesDistrib[i], i)
+                                        _this.display_file_list(node_data, i);
+                                        _this.render();
+                                    }
+                                }
+                            )
+                            ;
                         })
                 })
 
                 var cluster_update = subtopic_container
                     .selectAll("g.subtopic-cluster")
                     .data(clusters, function (d) {
-
                         return d.i;
                     })
 
                 cluster_update
                     .exit()
-                    .each(function (d) {
-                        console.log("exit d",d.i)
-                    })
                     .remove()
 
 
@@ -570,7 +589,7 @@ function add_hexmap_model_2(_this) {
                     d3.select("g.subtopics")
                         .transition()
                         .ease(d3.easeLinear)
-                        .delay(_this.config.transition_duration * 2)
+                        .delay(_this.config.transition_duration * 1)
                         .duration(_this.config.transition_duration * 1)
                         .style("transform", function () {
                             var tempx = (_this.config.width - boundary.width * subtopic_scale ) / 2;
@@ -585,10 +604,9 @@ function add_hexmap_model_2(_this) {
                     d3.select("g.subtopics")
                         .selectAll("g.subtopic-cluster")
                         .data(_this.overview.subtopic_clusters)
-                        .style("pointer-events", "initial")
                         .transition()
                         .ease(d3.easeLinear)
-                        .delay(_this.config.transition_duration * 2)
+                        .delay(_this.config.transition_duration * 1)
                         .duration(_this.config.transition_duration * 1)
                         .style("transform", function (d) {
                             return "translate(" + d.offsetx + "px," + d.offsety + "px)";
@@ -606,7 +624,6 @@ function add_hexmap_model_2(_this) {
                                 + "scale(" + overall_scale + "," + overall_scale + ")";
                             return str;
                         })
-                        .style("pointer-events", "none");
                     var update = d3.select("g.subtopics")
                         .selectAll("g.subtopic-cluster")
 
@@ -636,7 +653,68 @@ function add_hexmap_model_2(_this) {
 
         }
 
+    }
 
+    var render_supertopic_overview = function (level) {
+
+
+        var shrink_scale = 0.75;
+        var select = _this.view.selected_hex_at_level[level];
+
+        var data;
+
+
+        // Title on left corner
+        {
+            if (select) {
+                data = [select];
+            } else {
+                data = [];
+            }
+
+            var enter = _this.overview.supertopic_container
+                .selectAll("g.super-topic-container")
+                .data(data, function (d) {
+                    return d.hex.topic_id;
+                })
+                .enter()
+
+            var padding = _this.config.hexagon_scale * shrink_scale;
+
+            var container = enter.append("g")
+                .attr("class", "super-topic-container")
+                .style("transform", "translate(" + padding + "px," + padding + "px)"
+                    + " scale(" + shrink_scale + "," + shrink_scale + ")")
+
+            container.each(function (d) {
+                _this.draw_topic(
+                    container, d.data, d.hex, d.hex.pos, true, false,
+                    {
+                        dbclick: function (d, node_data, i) {
+
+                        },
+                        click: function (d, node_data, i) {
+
+                        }
+                    }
+                )
+
+            })
+
+            var update = _this.overview.supertopic_container
+                .selectAll("g.super-topic-container")
+                .data(data, function (d) {
+                    return d.hex.topic_id;
+                })
+
+            update
+                .exit()
+                .remove();
+        }
+
+        // sub topic hightlight
+
+        render_subtopic_popup(level);
     }
 
     var render_overview = function (level) {
@@ -810,44 +888,85 @@ function add_hexmap_model_2(_this) {
 
 
         var zoomin = function () {
-            if (!_this.overview.popup_subtopics) {
-                _this.overview.popup_subtopics = true;
-            } else {
-                var lvl = _this.get_zoom_depth();
-                if (!_this.overview.subtopics || _this.overview.level !== lvl) {
-                    _this.overview.subtopics = null;
-                }
-                _this.view.zoom_power = (_this.get_zoom_depth() + 1) * 2 + 1;
-                _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
-                _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
-                _this.overview.popup_subtopics = true;
-                _this.drag_graph(_this.view_wrap, true);
-                _this.render()
+            console.log("zoom in current was ", _this.zooming_states.current)
+            var old = _this.zooming_states.current;
+            if (_this.zooming_states.current == "s0") {
+                _this.zooming_states.current = "s1a";
+            } else if (_this.zooming_states.current == "s1a") {
+                _this.zooming_states.current = "s1b";
+            } else if (_this.zooming_states.current == "s1b") {
 
+
+                _this.zooming_states.current = "s2a";
+            } else if (_this.zooming_states.current == "s2a") {
+                _this.zooming_states.current = "s2b";
             }
+            if (_this.zooming_states.current !== old) {
+                console.log("zoom to " + _this.zooming_states.current)
+                _this.zooming_states[_this.zooming_states.current]();
+                _this.drag_graph(_this.view_wrap, true);
+                _this.render();
+            }
+            //
+            // if (!_this.overview.popup_subtopics) {
+            //     _this.overview.popup_subtopics = true;
+            // } else {
+            //     var lvl = _this.get_zoom_depth();
+            //     if (!_this.overview.subtopics || _this.overview.level !== lvl) {
+            //         _this.overview.subtopics = null;
+            //     }
+            //     _this.view.zoom_power = (_this.get_zoom_depth() + 1) * 2 + 1;
+            //     _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
+            //     _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
+            //     _this.overview.popup_subtopics = true;
+            //
+            //
+            // }
         }
 
         var zoomout = function () {
             console.log("zoomout")
-            if (!_this.overview.popup_subtopics || !_this.view.selected_hex) {
-                _this.overview.subtopics = null;
+            var old = _this.zooming_states.current;
+            switch (_this.zooming_states.current) {
+                case "s1a":
+                    _this.zooming_states.current = "s0";
+                    break;
+                case "s1b":
+                    _this.zooming_states.current = "s1a";
+                    break;
+                case "s2a":
+                    _this.zooming_states.current = "s1b";
+                    break;
+                case "s2b":
+                    _this.zooming_states.current = "s2a";
+                    break;
 
-
-                _this.view.zoom_power = (_this.get_zoom_depth() - 1) * 2 + 1;
-                _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
-                _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
-                _this.overview.popup_subtopics = true;
-                _this.drag_graph(_this.view_wrap, true);
-                _this.render()
-            } else if (_this.overview.popup_subtopics) {
-                _this.overview.popup_subtopics = false;
             }
+            if (old !== _this.zooming_states.current) {
+                console.log("zoom to " + _this.zooming_states.current)
+                _this.zooming_states[_this.zooming_states.current]();
+                _this.drag_graph(_this.view_wrap, true);
+                _this.render();
+            }
+
+            // if (!_this.overview.popup_subtopics || !_this.view.selected_hex) {
+            //     _this.overview.subtopics = null;
+            //     _this.view.zoom_power = (_this.get_zoom_depth() - 1) * 2 + 1;
+            //     _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
+            //     _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
+            //     _this.overview.popup_subtopics = true;
+            //     _this.drag_graph(_this.view_wrap, true);
+            //     _this.render()
+            // } else if (_this.overview.popup_subtopics) {
+            //     _this.overview.popup_subtopics = false;
+            // }
         }
 
         var click = function () {
 
             var hex_id = _this.hover_overview_hexagon_id;
-            if (!hex_id) {
+            console.log(hex_id)
+            if (!hex_id || _this.overview.popup_subtopics) {
                 zoomout();
             }
 
@@ -927,14 +1046,18 @@ function add_hexmap_model_2(_this) {
         bind_mousewheel("overview_supertopic_svg", function (delta) {
 
             _this.mousewheel_delta += delta;
-            console.log("delta=", delta)
-            setTimeout(function () {
+
+            if (_this.wheel_timeout_cache) {
+                clearTimeout(_this.wheel_timeout_cache);
+            }
+            _this.wheel_timeout_cache = setTimeout(function () {
+                console.log("delta=", delta)
                 if (_this.mousewheel_delta < 0) {
                     zoomout();
                 } else if (_this.mousewheel_delta > 0) {
                     zoomin();
                 }
-                _this.render();
+
                 _this.mousewheel_delta = 0;
             }, 50)
         })
@@ -978,7 +1101,35 @@ function add_hexmap_model_2(_this) {
                         "scale(" + scale * shrink + "," + scale * shrink + ")";
                 })
                 .each(function (d, i) {
-                    _this.draw_topic(d3.select(this), node_data, d, d.pos)
+                    _this.draw_topic(
+                        d3.select(this), node_data, d, d.pos, undefined, undefined,
+                        {
+                            dbclick: function (d, node_data, i) {
+                                //console.log("click dpth = " , node_data);
+                                _this.show_cloud(node_data.data.topics[i]);
+                                _this.view.selected_hex = {
+                                    data: node_data,
+                                    hex: d
+                                }
+                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
+
+                                _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
+                            },
+                            click: function (d, node_data, i) {
+                                _this.show_cloud(node_data.data.topics[i]);
+                                //console.log(node_data, _this.get_zooming_opacity(node_data))
+                                _this.view.selected_hex = {
+                                    data: node_data,
+                                    hex: d
+                                }
+                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
+
+                                //console.log(node_data.data.topicClassesDistrib[i], i)
+                                _this.display_file_list(node_data, i);
+                                _this.render();
+                            }
+                        }
+                    )
                 })
 
 

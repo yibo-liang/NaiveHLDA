@@ -415,7 +415,7 @@ function add_single_hexagon_render(_this) {
 
             var cc = clickcancel();
 
-            var default_dbclick = function (d, nodedata, i) {
+            var default_dbclick = function (d, node_data, i) {
                 //console.log("click dpth = " , node_data);
                 _this.show_cloud(node_data.data.topics[i]);
                 _this.view.selected_hex = {
@@ -426,7 +426,7 @@ function add_single_hexagon_render(_this) {
                 _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
             }
 
-            var default_click = function (d, nodedata, i) {
+            var default_click = function (d, node_data, i) {
                 _this.show_cloud(node_data.data.topics[i]);
                 //console.log(node_data, _this.get_zooming_opacity(node_data))
                 _this.view.selected_hex = {

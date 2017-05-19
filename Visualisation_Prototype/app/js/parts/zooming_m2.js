@@ -7,17 +7,24 @@ function add_zooming_m2(_this) {
     _this.enable_zooming = function () {
         _this.mousewheel_delta = 0;
         bind_mousewheel("hex_svg", function (delta) {
+
             _this.mousewheel_delta += delta;
-            //console.log(zoom_depth())
-            setTimeout(function () {
-                if (_this.mousewheel_delta > 3) _this.mousewheel_delta = 3;
-                _this.view.zoom_power = Math.min(Math.max(_this.mousewheel_delta * 0.5 + _this.view.zoom_power, 1), 7);
-                _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
-                _this.view.zoom_scale = Math.min(Math.max(_this.view.zoom_scale, 1), 27);
+
+            if (_this.wheel_timeout_cache) {
+                clearTimeout(_this.wheel_timeout_cache);
+            }
+            _this.wheel_timeout_cache = setTimeout(function () {
+                console.log("delta=", delta)
+                if (_this.mousewheel_delta < 0) {
+                } else if (_this.mousewheel_delta > 0) {
+                    _this.zooming_states.current = "s1a";
+                    _this.zooming_states[_this.zooming_states.current]();
+                }
+
                 _this.drag_graph(_this.view_wrap, true);
-                _this.render()
+                _this.render();
                 _this.mousewheel_delta = 0;
-            }, 1)
+            }, 50)
         })
         return _this;
     }
@@ -48,6 +55,12 @@ function add_zooming_m2(_this) {
         if (result > 2) result = 2;
         return result;
     };
+
+    _this.set_zoom_depth = function (l) {
+        _this.view.zoom_power = (l) * 2 + 1;
+        _this.view.zoom_power = Math.min(Math.max(_this.view.zoom_power, 1), 7);
+        _this.view.zoom_scale = Math.pow(_this.view.zoom_base, _this.view.zoom_power - 1)
+    }
 
     _this.zoom_to_depth = function (node_data, dx, dy) {
         var level = node_data.level;
