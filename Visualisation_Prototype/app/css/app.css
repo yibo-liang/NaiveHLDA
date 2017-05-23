@@ -276,7 +276,7 @@ div.hexmap-container{
 
 div.overview-container{
 
-    background-color: rgba(240,240,240,0.35);
+    background-color: rgba(240,240,240,0.85);
     visibility: hidden;
     position: absolute;
     top:0;
