@@ -14,7 +14,7 @@ function add_zooming_m2(_this) {
                 clearTimeout(_this.wheel_timeout_cache);
             }
             _this.wheel_timeout_cache = setTimeout(function () {
-                console.log("delta=", delta)
+                //console.log("delta=", delta)
                 if (_this.mousewheel_delta < 0) {
                 } else if (_this.mousewheel_delta > 0) {
                     _this.zooming_states.current = "s1a";
