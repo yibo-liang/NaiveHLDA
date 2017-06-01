@@ -204,8 +204,13 @@ function add_data_process(_this) {
                     y: y,
                     absolute_x: x,
                     absolute_y: y,
-                    pos: i
+                    pos: parseInt(_this.hexmap_data["hexmapData"][i].topicId)
                 };
+
+                _this.topic_data.data.hexagons = _this.topic_data.data.hexagons.sort(function (a, b) {
+                    return parseInt(a.topic_id) - parseInt(b.topic_id);
+                })
+
                 //update boundary box value
                 var d = _this.topic_data.data.hexagons[i];
                 //console.log("hex:", d)

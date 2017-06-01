@@ -90,7 +90,7 @@ function add_data_process_m2(_this) {
                 }
             }
         }
-       // console.log(_this.topic_value_maximums)
+        // console.log(_this.topic_value_maximums)
 
 
     }
@@ -200,12 +200,12 @@ function add_data_process_m2(_this) {
         function allDataLoaded() {
             if (_this.data_count < 0) return false;
 
-            for (var i = 0; i <_this.data_count; i++) {
+            for (var i = 0; i < _this.data_count; i++) {
                 //console.log(i, _this.hexmap_data[i] , _this.topic_data[i] )
-                if (!_this.hexmap_data[i] || !_this.topic_data[i] ) {
+                if (!_this.hexmap_data[i] || !_this.topic_data[i]) {
                     return false;
                 }
-                if (i<_this.data_count-1 && typeof _this.compare_data[i]=="undefined"){
+                if (i < _this.data_count - 1 && typeof _this.compare_data[i] == "undefined") {
                     return false;
                 }
             }
@@ -238,13 +238,18 @@ function add_data_process_m2(_this) {
                         y: y,
                         absolute_x: x,
                         absolute_y: y,
-                        pos: i
+                        pos: hexmap_data["hexmapData"][i].topicId
                     };
                     //update boundary box value
 
                     // if (_this.topic_data.children.length > 0)
                     //     set_all_position(_this.topic_data.children[i], _this.topic_data.data.hexagons[i]);
                 }
+
+                //sort hexagons according to topic_id
+                topic_data.data.hexagons = topic_data.data.hexagons.sort(function (a, b) {
+                    return parseInt(a.topic_id) - parseInt(b.topic_id);
+                })
 
 
                 delete topic_data.data.submodels;

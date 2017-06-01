@@ -172,7 +172,9 @@ function add_single_hexagon_render(_this) {
 
         var pie = d3.pie()
             .value(function (d) {
-                return parseFloat(d.weightedValueSum) * (_this.view.pie_selected(d.classID) ? 1 : 0);
+                var val = parseFloat(d.weightedValueSum) * (_this.view.pie_selected(d.classID) ? 1 : 0);
+                //console.log("pie val=" + val)
+                return val;
             })
             .sort(null)
             (pie_data)
@@ -184,10 +186,10 @@ function add_single_hexagon_render(_this) {
         // var radius = _this.config.hexagon_scale * Math.sqrt(3) / 2;
         // radius = radius * min_radius_percentage + radius * (1 - min_radius_percentage) * ((sum - range.min) / (range.max - range.min));
         var max_radius = _this.config.hexagon_scale * Math.sqrt(3) / 2 - 10;
-        var k = ((sum - range.min) / (range.max - range.min));
+        var k = ((sum - range.min) / (range.max - range.min + 0.001));
         //console.log("k = " + (sum) + "/" + (range.max - range.min) + "=" + k, range.max, range.min)
         var new_r = Math.sqrt(k * max_radius * max_radius) + 10;
-        //console.log(new_r);
+        //console.log("new_r=", new_r);
         if (isNaN(new_r)) new_r = 0;
 
         pie.forEach(function (d, i) {
@@ -230,6 +232,7 @@ function add_single_hexagon_render(_this) {
             .attr("d", function (d, i) {
                 var r = Math.sqrt(k * max_radius * max_radius) + 10;
                 d.outerRadius = r;
+                //console.log(d);
                 var t = arc(d, i);
                 //console.log("t=", t, d)
                 return t;

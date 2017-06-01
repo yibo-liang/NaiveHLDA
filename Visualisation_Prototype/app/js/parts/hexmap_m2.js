@@ -7,13 +7,47 @@
 
 function add_hexmap_model_2(_this) {
 
+
+    var hexagon_click = {
+        dbclick: function (d, node_data, i) {
+            console.log("dbclick");
+            _this.show_cloud(node_data.data.topics[i]);
+            _this.view.selected_hex = {
+                data: node_data,
+                hex: d
+            }
+            _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
+            assign_subtopics(node_data.level);
+            //_this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
+            _this.view.zoomin();
+
+        },
+        click: function (d, node_data, i) {
+            console.log("click");
+            _this.show_cloud(node_data.data.topics[i]);
+            //console.log(node_data, _this.get_zooming_opa city(node_data))
+            _this.view.selected_hex = {
+                data: node_data,
+                hex: d
+            }
+            _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
+            //console.log("click", _this.view.selected_hex_at_level)
+            //console.log(node_data.data.topicClassesDistrib[i], i)
+            assign_subtopics(node_data.level);
+            _this.display_file_list(node_data, i);
+            _this.render();
+        }
+    }
+
     var assign_subtopics = function (level) {
         //console.log("assign level ", level)
         if (level >= 2) return;
         var select = _this.view.selected_hex_at_level[level];
-        //console.log("subtopic of ",select)
+        //console.log("subtopic of ", select.hex, "level = ", level)
+
         var num_topics = 10;
-        var subtopic_similarity = _this.compare_data[level][parseInt(select.hex.pos)];
+        var topic_id = parseInt(select.hex.topic_id);
+        var subtopic_similarity = _this.compare_data[level][topic_id];
         var subtopics = subtopic_similarity.map(function (d, i) {
             return {id: i, value: d};
         })
@@ -22,7 +56,9 @@ function add_hexmap_model_2(_this) {
             return b.value - a.value;
         }).slice(0, num_topics);
         //console.log(JSON.stringify(a));
+        console.log("sub top at l", level, a);
         _this.overview.subtopics_at_level[level] = a;
+        console.log(_this.overview.subtopics_at_level)
     }
     _this.view.selected_hex_at_level = [];
     _this.zooming_states = {
@@ -35,11 +71,16 @@ function add_hexmap_model_2(_this) {
             _this.overview.level = 0;
             _this.set_zoom_depth(0)
             //console.log(_this.get_zoom_depth())
+            _this.overview.mouseover_popup_container
+                .style("opacity", 0);
         },
         s1a: function () {
             _this.overview.map
                 .transition()
                 .style("opacity", 1)
+            _this.overview.mouseover_popup_container
+                .style("opacity", 1);
+
             _this.overview.popup_subtopics = false;
             _this.overview.level = 1;
             _this.set_zoom_depth(1)
@@ -50,17 +91,24 @@ function add_hexmap_model_2(_this) {
                     .selectAll("g.subtopic-cluster")
                     .style("pointer-events", "none")
             })
+
+
         },
         s1b: function () {
             _this.overview.map
                 .transition()
                 .style("opacity", 0)
+
+
+            _this.overview.mouseover_popup_container
+                .style("opacity", 0);
+
             _this.overview.popup_subtopics = true;
             _this.hover_overview_hexagon_id = null;
             _this.overview.level = 1;
 
             _this.set_zoom_depth(1)
-            console.log(_this.get_zoom_depth())
+            //console.log(_this.get_zoom_depth())
             setTimeout(function () {
                 d3.select("g.subtopics")
                     .selectAll("g.subtopic-cluster")
@@ -71,26 +119,34 @@ function add_hexmap_model_2(_this) {
             _this.overview.map
                 .transition()
                 .style("opacity", 1)
+            _this.overview.mouseover_popup_container
+                .style("opacity", 1);
+
             _this.overview.popup_subtopics = false;
             _this.overview.level = 2;
             _this.set_zoom_depth(2)
-            console.log(_this.get_zoom_depth())
+            //console.log(_this.get_zoom_depth())
 
             setTimeout(function () {
                 d3.select("g.subtopics")
                     .selectAll("g.subtopic-cluster")
                     .style("pointer-events", "none")
             })
+
         },
         s2b: function () {
             _this.overview.map
                 .transition()
                 .style("opacity", 0)
+
+            _this.overview.mouseover_popup_container
+                .style("opacity", 0);
+
             _this.overview.popup_subtopics = true;
             _this.hover_overview_hexagon_id = null;
             _this.overview.level = 2;
             _this.set_zoom_depth(2)
-            console.log(_this.get_zoom_depth())
+            //console.log(_this.get_zoom_depth())
 
             setTimeout(function () {
                 d3.select("g.subtopics")
@@ -159,7 +215,7 @@ function add_hexmap_model_2(_this) {
 
 
     var render_mouseover_topic_popup = function (level, topic_i) {
-        console.log("mouse over", topic_i)
+        //console.log("mouse over", topic_i)
 
         var hexagons = _this.topic_data[level].data.hexagons;
 
@@ -172,7 +228,7 @@ function add_hexmap_model_2(_this) {
         var lvl_scale;
         var overall_scale;
 
-        if (topic_i) {
+        if (typeof topic_i !== "undefined" && topic_i !== null) {
             var d = {
                 data: _this.topic_data[level],
                 hex: hexagons[topic_i]
@@ -188,7 +244,8 @@ function add_hexmap_model_2(_this) {
 
         }
 
-        console.log(data)
+
+        //console.log(topic_i, data)
         var enter = _this.overview.mouseover_popup_container
             .selectAll("g.pop")
             .data(data, function (d) {
@@ -206,7 +263,7 @@ function add_hexmap_model_2(_this) {
                 return str;
             })
             .each(function (d) {
-                _this.draw_topic(d3.select(this), d.data, d.hex, d.hex.pos)
+                _this.draw_topic(d3.select(this), d.data, d.hex, d.hex.topic_id)
             })
 
         var update = _this.overview.mouseover_popup_container
@@ -216,6 +273,8 @@ function add_hexmap_model_2(_this) {
             })
 
         update.transition()
+            .delay(100)
+            .ease(d3.easeBack)
             .style("opacity", "1")
             .style("transform", function () {
                 var str = "translate(" + ox + "px," + oy + "px) "
@@ -240,7 +299,7 @@ function add_hexmap_model_2(_this) {
         console.log("add overview")
         _this.overview = {};
         _this.overview.subtopic_level = -1;
-        _this.overview.padding = {top: 200, left: 150, bottom: 150, right: 150};
+        _this.overview.padding = {top: 300, left: 250, bottom: 150, right: 150};
         _this.overview.display = true;
 
         _this.overview.subtopics_at_level = [];
@@ -407,6 +466,11 @@ function add_hexmap_model_2(_this) {
                 }
                 //console.log(result_groups)
             }
+
+            // for (var i = 0; i < result_groups.length; i++) {
+            //     result_groups[i].i = subtopic_hexs.length + "-" + i;
+            // }
+
             return result_groups;
 
         }
@@ -579,6 +643,7 @@ function add_hexmap_model_2(_this) {
                 var offsetx = cluster.offsetx;
                 var offsety = cluster.offsety;
                 //console.log("offsets ", offsetx, offsety)
+                cluster.i = "";
                 for (var k = 0; k < cluster.length; k++) {
                     var hex = cluster[k];
                     var x = hex.absolute_x + offsetx;
@@ -587,6 +652,7 @@ function add_hexmap_model_2(_this) {
                     if (x < min_x) min_x = x;
                     if (y > max_y) max_y = y;
                     if (y < min_y) min_y = y;
+                    cluster.i += hex.topic_id + "-";
                 }
             }
             for (var i = 0; i < clusters.length; i++) {
@@ -599,7 +665,8 @@ function add_hexmap_model_2(_this) {
                 cluster.offsetx += -min_x;
                 cluster.offsety += -min_y
 
-                cluster.i = (+new Date()) + level + "-" + i;
+
+                cluster.i += level;
             }
 
             return {
@@ -624,9 +691,11 @@ function add_hexmap_model_2(_this) {
 
 
             var hexagons = _this.topic_data[level + 1].data.hexagons;
+
             //console.log("hexagons", hexagons)
             var sub_topic_hexagons = [];
             var subtopics = _this.overview.subtopics_at_level[level];
+            //console.log("subtopics", subtopics)
             for (var i = 0; i < subtopics.length; i++) {
                 var id = subtopics[i].id;
                 sub_topic_hexagons.push(hexagons[id]);
@@ -659,22 +728,23 @@ function add_hexmap_model_2(_this) {
                     return str;
                 })
             _this.overview.subtopic_container = subtopic_container;
-        } else {
+        }
+        else {
             //console.log("multi time render", level, _this.overview.level)
             subtopic_container = _this.overview.subtopic_container;
             //if (_this.overview.level !== level) {
             lvl_scale = Math.pow(1 / 3, level + 1);
             overall_scale = scale * lvl_scale;
-            subtopic_container
-                .transition()
-                .ease(d3.easeLinear)
-                .delay(_this.config.transition_duration * 1)
-                .duration(_this.config.transition_duration * 1)
-                .style("transform", function () {
-                    var str = "translate(" + ox + "px," + oy + "px) "
-                        + "scale(" + overall_scale + "," + overall_scale + ")";
-                    return str;
-                })
+            // subtopic_container
+            //     .transition()
+            //     .ease(d3.easeLinear)
+            //     .delay(0)
+            //     .duration(_this.config.transition_duration * 1)
+            //     .style("transform", function () {
+            //         var str = "translate(" + ox + "px," + oy + "px) "
+            //             + "scale(" + overall_scale + "," + overall_scale + ")";
+            //         return str;
+            //     })
 
             //
             //}
@@ -691,7 +761,9 @@ function add_hexmap_model_2(_this) {
 
         cluster_enter.each(function (d, i) {
             d3.select(this).selectAll("g.subtopic-hex")
-                .data(d)
+                .data(d, function (d) {
+                    return d.topic_id;
+                })
                 .enter()
                 .append("g")
                 .attr("class", "subtopic-hex")
@@ -702,35 +774,9 @@ function add_hexmap_model_2(_this) {
                     var data = _this.topic_data[level + 1];
                     x.visible = true;
                     _this.draw_topic(
-                        d3.select(this), data, x, x.pos,
+                        d3.select(this), data, x, x.topic_id,
                         false, true,
-                        {
-                            dbclick: function (d, node_data, i) {
-                                //console.log("click dpth = " , node_data);
-                                _this.show_cloud(node_data.data.topics[i]);
-                                _this.view.selected_hex = {
-                                    data: node_data,
-                                    hex: d
-                                }
-                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                                assign_subtopics(node_data.level);
-                                _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
-                            },
-                            click: function (d, node_data, i) {
-                                _this.show_cloud(node_data.data.topics[i]);
-                                //console.log(node_data, _this.get_zooming_opacity(node_data))
-                                _this.view.selected_hex = {
-                                    data: node_data,
-                                    hex: d
-                                }
-                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                                console.log("click", _this.view.selected_hex_at_level)
-                                //console.log(node_data.data.topicClassesDistrib[i], i)
-                                assign_subtopics(node_data.level);
-                                _this.display_file_list(node_data, i);
-
-                            }
-                        }
+                        hexagon_click
                     )
                     ;
                 })
@@ -744,6 +790,9 @@ function add_hexmap_model_2(_this) {
 
         cluster_update
             .exit()
+            // .each(function (d) {
+            //     console.log("remve", d.i);
+            // })
             .remove()
 
 
@@ -758,41 +807,75 @@ function add_hexmap_model_2(_this) {
         var boundary = _this.overview.subtopic_boundary;
         var dx = boundary.width;
         var dy = boundary.height;
-
+        //console.log("w=", dx, "h=", dy);
         var padding = _this.overview.padding;
+        var a = (_this.config.height - padding.top - padding.bottom) / dy;
+        var b = (_this.config.width - padding.left - padding.right) / dx
         var subtopic_scale = Math.min(
-            (_this.config.height - padding.top - padding.bottom) / dy,
-            (_this.config.width - padding.left - padding.right) / dx
+            a, b
         );
+        //console.log(a, b, subtopic_scale)
         if (_this.overview.popup_subtopics) {
+            // d3.select("g.subtopics")
+            //     .transition()
+            //     .ease(d3.easeLinear)
+            //     .delay(_this.config.transition_duration * 1)
+            //     .duration(_this.config.transition_duration * 1)
+            //     .style("transform", function () {
+            //         var tempx = (_this.config.width - boundary.width * subtopic_scale ) / 2;
+            //         var tempy = (_this.config.height - boundary.height * subtopic_scale ) / 2;
+            //         //console.log(tempx, tempy, boundary.width, boundary.height);
+            //         var str = "translate(" + tempx + "px," + tempy + "px) "
+            //             + "scale(" + subtopic_scale + "," + subtopic_scale + ")";
+            //         //console.log("enlarge " + str);
+            //         return str;
+            //     })
+
+
+            // d3.select("g.subtopics")
+            //     .transition()
+            //     .ease(d3.easeLinear)
+            //     .delay(_this.config.transition_duration * 0)
+            //     .duration(_this.config.transition_duration * 1)
+            //     .style("transform", function () {
+            //         var tempx = (_this.config.width - boundary.width * subtopic_scale ) / 2;
+            //         var tempy = (_this.config.height - boundary.height * subtopic_scale ) / 2;
+            //         //console.log(tempx, tempy, boundary.width, boundary.height);
+            //         var str = "translate(" + tempx + "px," + tempy + "px) "+
+            //             "scale(" + overall_scale + "," + overall_scale + ")"
+            //         //console.log("enlarge " + str);
+            //         return str;
+            //     })
+            //console.log("popup");
             d3.select("g.subtopics")
                 .transition()
-                .ease(d3.easeLinear)
+                .ease(d3.easeExpIn)
                 .delay(_this.config.transition_duration * 1)
                 .duration(_this.config.transition_duration * 1)
                 .style("transform", function () {
                     var tempx = (_this.config.width - boundary.width * subtopic_scale ) / 2;
                     var tempy = (_this.config.height - boundary.height * subtopic_scale ) / 2;
                     //console.log(tempx, tempy, boundary.width, boundary.height);
-                    var str = "translate(" + tempx + "px," + tempy + "px) "
-                        + "scale(" + subtopic_scale + "," + subtopic_scale + ")";
+                    var str = "translate(" + tempx + "px," + tempy + "px) " +
+                        "scale(" + subtopic_scale * 1 + "," + subtopic_scale * 1 + ")";
                     //console.log("enlarge " + str);
                     return str;
                 })
 
+
             d3.select("g.subtopics")
                 .selectAll("g.subtopic-cluster")
-                .data(_this.overview.subtopic_clusters)
                 .transition()
                 .ease(d3.easeLinear)
                 .delay(_this.config.transition_duration * 1)
                 .duration(_this.config.transition_duration * 1)
+                .style("opacity", "1")
                 .style("transform", function (d) {
                     return "translate(" + d.offsetx + "px," + d.offsety + "px)";
                 })
         } else {
 
-            //console.log("popup overval scale update", overall_scale);
+            //console.log("no popup");
             d3.select("g.subtopics")
                 .transition()
                 .ease(d3.easeLinear)
@@ -807,8 +890,10 @@ function add_hexmap_model_2(_this) {
                 .selectAll("g.subtopic-cluster")
 
             update.transition()
-                .ease(d3.easeLinear)
+                .ease(d3.easeExpIn)
+                .delay(_this.config.transition_duration * 1)
                 .duration(_this.config.transition_duration * 1)
+                .style("opacity", "0.5")
                 .style("transform", function (d) {
                     return "translate(" + 0 + "px," + 0 + "px)";
                 })
@@ -823,7 +908,7 @@ function add_hexmap_model_2(_this) {
                 var node_data = _this.topic_data[level + 1];
                 _this.draw_pie_in_group(
                     d3.select(this),
-                    node_data.data.topicClassesDistrib[d.pos],
+                    node_data.data.topicClassesDistrib[d.topic_id],
                     node_data.data.topicClassesDistrib,
                     node_data.depth
                 )
@@ -877,34 +962,8 @@ function add_hexmap_model_2(_this) {
                 //     }
                 // )
                 _this.draw_topic(
-                    container, d.data, d.hex, d.hex.pos, true, false,
-                    {
-                        dbclick: function (d, node_data, i) {
-                            //console.log("click dpth = " , node_data);
-                            _this.show_cloud(node_data.data.topics[i]);
-                            _this.view.selected_hex = {
-                                data: node_data,
-                                hex: d
-                            }
-                            _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                            assign_subtopics(node_data.level);
-                            _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
-                        },
-                        click: function (d, node_data, i) {
-                            _this.show_cloud(node_data.data.topics[i]);
-                            //console.log(node_data, _this.get_zooming_opacity(node_data))
-                            _this.view.selected_hex = {
-                                data: node_data,
-                                hex: d
-                            }
-                            _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                            console.log("click", _this.view.selected_hex_at_level)
-                            //console.log(node_data.data.topicClassesDistrib[i], i)
-                            assign_subtopics(node_data.level);
-                            _this.display_file_list(node_data, i);
-                            _this.render();
-                        }
-                    }
+                    container, d.data, d.hex, d.hex.topic_id, true, false,
+                    hexagon_click
                 )
 
             })
@@ -975,14 +1034,57 @@ function add_hexmap_model_2(_this) {
         ctx.lineWidth = "3"
         ctx.fillStyle = "rgba(255,255,255,1)"
 
+        function naive_to_array(obj) {
+            var arr = [];
+            for (var key in obj) {
+                arr[parseInt(key)] = obj[key];
+            }
+            return arr;
+        }
+
+        function normalise(arr) {
+            var maxf = function (a, b) {
+                return Math.max(a, b);
+            };
+            var minf = function (a, b) {
+                return Math.min(a, b);
+            };
+            var array = (arr)
+            var max = array.reduce(maxf)
+            var min = array.reduce(minf)
+
+            var d = max - min + 0.00001;
+            var n = function (data) {
+                return (data - min) / d;
+            }
+            return array.map(n);
+        }
 
         //draw base hexagons
         for (var i = 0; i < hexagons.length; i++) {
             //console.log(hexagons[i], i)
-            if (_this.hover_overview_hexagon_id && _this.hover_overview_hexagon_id == i) {
+            if (typeof _this.hover_overview_hexagon_id !== "undefined" && _this.hover_overview_hexagon_id !== null && _this.hover_overview_hexagon_id == i) {
                 ctx.fillStyle = "rgba(155,155,255,1)";
             } else {
-                ctx.fillStyle = "rgba(255,255,255,1)";
+
+                if (typeof _this.hover_overview_hexagon_id !== "undefined" && _this.hover_overview_hexagon_id !== null) {
+                    // var topic_id = parseInt(hexagons[i].topic_id);
+                    // var sim_mat = _this.topic_data[level].data.topicsSimilarities;
+                    // var select_hex = hexagons[_this.hover_overview_hexagon_id];
+                    // var row = sim_mat[select_hex.topic_id];
+                    //
+                    // var norm_row = naive_to_array(row)
+                    // norm_row[_this.hover_overview_hexagon_id] = 0;
+                    // norm_row = normalise(norm_row);
+                    // //.log(norm_row[_this.hover_overview_hexagon_id])
+                    // var similarity = norm_row[topic_id];
+
+                    //console.log(_this.hover_overview_hexagon_id, topic_id, similarity, i)
+                    ctx.fillStyle = "rgba(255,255,255," + 1 + ")";
+                } else {
+                    ctx.fillStyle = "rgba(255,255,255," + 1 + ")";
+                }
+
             }
             //console.log(ctx.fillStyle)
             ctx.beginPath();
@@ -1010,9 +1112,10 @@ function add_hexmap_model_2(_this) {
         }
 
         //draw selected subtopics
-        if (_this.overview.subtopics)
-            for (var i = 0; i < _this.overview.subtopics.length; i++) {
-                var id = _this.overview.subtopics[i].id;
+        if (_this.overview.subtopics_at_level[level - 1]) {
+            var subtopics = _this.overview.subtopics_at_level[level - 1];
+            for (var i = 0; i < subtopics.length; i++) {
+                var id = subtopics[i].id;
                 var sub_topic_hexagon = (hexagons[id]);
                 ctx.beginPath();
                 ctx.fillStyle = "rgba(255,1,1,0.15)";
@@ -1031,7 +1134,7 @@ function add_hexmap_model_2(_this) {
                 ctx.closePath();
                 ctx.fill();
             }
-
+        }
         function draw_line(ctx, x1, y1, x2, y2) {
             //console.log(x1, y1, x2, y2);
             ctx.beginPath();
@@ -1140,6 +1243,8 @@ function add_hexmap_model_2(_this) {
             // }
         }
 
+        _this.view.zoomin = zoomin;
+
         var zoomout = function () {
             //console.log("zoomout")
             var old = _this.zooming_states.current;
@@ -1187,8 +1292,28 @@ function add_hexmap_model_2(_this) {
 
         var click = function () {
 
-            // var hex_id = _this.hover_overview_hexagon_id;
-            zoomout();
+            var hex_id = _this.hover_overview_hexagon_id;
+            if (typeof  hex_id == "undefined" || hex_id == null) {
+                zoomout();
+            } else {
+                var i = hex_id;
+                var node_data = _this.topic_data[level];
+                var d = node_data.data.hexagons[i];
+                _this.show_cloud(node_data.data.topics[i]);
+                //console.log(node_data, _this.get_zooming_opa city(node_data))
+                _this.view.selected_hex = {
+                    data: node_data,
+                    hex: d
+                }
+                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
+                console.log("click", _this.view.selected_hex_at_level)
+                //console.log(node_data.data.topicClassesDistrib[i], i)
+                assign_subtopics(node_data.level);
+                _this.display_file_list(node_data, i);
+
+                zoomin();
+                zoomin();
+            }
 
         }
 
@@ -1204,6 +1329,7 @@ function add_hexmap_model_2(_this) {
             var y = mouse[1];
 
             var rgba = ctx.getImageData(x, y, 1, 1).data;
+            console.log(JSON.stringify(rgba), rgba[3] > 0)
             if (rgba[3] > 0) {
                 _this.overview_mouse_on_hexagon = true;
             } else {
@@ -1227,6 +1353,7 @@ function add_hexmap_model_2(_this) {
                     closest = i;
                 }
             }
+            console.log("closest", closest)
             if (closest !== _this.hover_overview_hexagon_id) {
                 _this.hover_overview_hexagon_id = closest;
 
@@ -1327,34 +1454,8 @@ function add_hexmap_model_2(_this) {
                 })
                 .each(function (d, i) {
                     _this.draw_topic(
-                        d3.select(this), node_data, d, d.pos, undefined, undefined,
-                        {
-                            dbclick: function (d, node_data, i) {
-                                //console.log("click dpth = " , node_data);
-                                _this.show_cloud(node_data.data.topics[i]);
-                                _this.view.selected_hex = {
-                                    data: node_data,
-                                    hex: d
-                                }
-                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                                assign_subtopics(node_data.level);
-                                _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
-                            },
-                            click: function (d, node_data, i) {
-                                _this.show_cloud(node_data.data.topics[i]);
-                                //console.log(node_data, _this.get_zooming_opacity(node_data))
-                                _this.view.selected_hex = {
-                                    data: node_data,
-                                    hex: d
-                                }
-                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                                //console.log("click", _this.view.selected_hex_at_level)
-                                //console.log(node_data.data.topicClassesDistrib[i], i)
-                                assign_subtopics(node_data.level);
-                                _this.display_file_list(node_data, i);
-                                _this.render();
-                            }
-                        }
+                        d3.select(this), node_data, d, d.topic_id, undefined, undefined,
+                        hexagon_click
                     )
                 })
 
@@ -1398,7 +1499,7 @@ function add_hexmap_model_2(_this) {
             var selection = hexagons_wrap
                 .selectAll("g.wrap-single-" + l)
                 .data(hexagons, function (d) {
-                    return d.pos
+                    return level + "-" + d.pos
                 })
 
             //exit
@@ -1420,34 +1521,7 @@ function add_hexmap_model_2(_this) {
                     //console.log(l,node_data, d )
                     //_this.draw_topic(d3.select(this), node_data, d, d.pos)
                     _this.draw_topic(
-                        d3.select(this), node_data, d, d.pos, undefined, undefined,
-                        {
-                            dbclick: function (d, node_data, i) {
-                                //console.log("click dpth = " , node_data);
-                                _this.show_cloud(node_data.data.topics[i]);
-                                _this.view.selected_hex = {
-                                    data: node_data,
-                                    hex: d
-                                }
-                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                                assign_subtopics(node_data.level);
-                                _this.zoom_to_depth(node_data, d.absolute_x, d.absolute_y);
-                            },
-                            click: function (d, node_data, i) {
-                                _this.show_cloud(node_data.data.topics[i]);
-                                //console.log(node_data, _this.get_zooming_opacity(node_data))
-                                _this.view.selected_hex = {
-                                    data: node_data,
-                                    hex: d
-                                }
-                                _this.view.selected_hex_at_level[node_data.level] = _this.view.selected_hex;
-                                console.log("click", _this.view.selected_hex_at_level)
-                                //console.log(node_data.data.topicClassesDistrib[i], i)
-                                assign_subtopics(node_data.level);
-                                _this.display_file_list(node_data, i);
-                                _this.render();
-                            }
-                        }
+                        d3.select(this), node_data, d, d.topic_id, undefined, undefined, hexagon_click
                     )
                 })
                 .transition()
@@ -1458,16 +1532,17 @@ function add_hexmap_model_2(_this) {
             selection.selectAll("g")
                 .each(function (d, i) {
 
-                    switch_pie_display(d3.select(this), node_data, d, d.pos);
+                    switch_pie_display(d3.select(this), node_data, d, d.tpoic_id);
 
                 })
 
 
             selection.selectAll("g.data")
                 .each(function (d, i) {
+                    //console.log("draw pie", level)
                     _this.draw_pie_in_group(
                         d3.select(this),
-                        node_data.data.topicClassesDistrib[d.pos],
+                        node_data.data.topicClassesDistrib[d.topic_id],
                         node_data.data.topicClassesDistrib,
                         node_data.depth)
                 })
@@ -1476,7 +1551,8 @@ function add_hexmap_model_2(_this) {
             //update search query pies
             selection.selectAll("g.data")
                 .each(function (d, i) {
-                    _this.draw_query_distribution(d3.select(this), d.pos, node_data.data.query_result, l);
+                    //_this.draw_query_distribution(d3.select(this), d.pos, node_data.data.query_result, l);
+                    _this.draw_query_distribution(d3.select(this), d.topic_id, node_data.data.query_result, l);
                 })
 
             // //update on click select
