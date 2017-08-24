@@ -317,6 +317,7 @@ function add_single_hexagon_render(_this) {
 
         if (d.visible || visible) {
 
+            console.log("drawing polygon")
             //draw polygon
             container.append("polygon")
                 .attr("points", hexagon_points(0, 0, 1 * _this.config.hexagon_scale))
@@ -420,7 +421,7 @@ function add_single_hexagon_render(_this) {
 
             var default_dbclick = function (d, node_data, i) {
                 //console.log("click dpth = " , node_data);
-                _this.show_cloud(node_data.data.topics[i]);
+                _this.show_cloud(node_data.data.topics[i], _this.get_zoom_depth() + "-" + i);
                 _this.view.selected_hex = {
                     data: node_data,
                     hex: d
@@ -430,7 +431,7 @@ function add_single_hexagon_render(_this) {
             }
 
             var default_click = function (d, node_data, i) {
-                _this.show_cloud(node_data.data.topics[i]);
+                _this.show_cloud(node_data.data.topics[i], _this.get_zoom_depth() + "-" + i);
                 //console.log(node_data, _this.get_zooming_opacity(node_data))
                 _this.view.selected_hex = {
                     data: node_data,
