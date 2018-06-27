@@ -11,7 +11,7 @@ function add_hexmap_model_2(_this) {
     var hexagon_click = {
         dbclick: function (d, node_data, i) {
             console.log("dbclick");
-            _this.show_cloud(node_data.data.topics[i]);
+            _this.show_cloud(node_data.data.topics[i], _this.get_zoom_depth() + "-" + i);
             _this.view.selected_hex = {
                 data: node_data,
                 hex: d
@@ -24,7 +24,7 @@ function add_hexmap_model_2(_this) {
         },
         click: function (d, node_data, i) {
             console.log("click");
-            _this.show_cloud(node_data.data.topics[i]);
+            _this.show_cloud(node_data.data.topics[i], _this.get_zoom_depth() + "-" + i);
             //console.log(node_data, _this.get_zooming_opa city(node_data))
             _this.view.selected_hex = {
                 data: node_data,
@@ -263,6 +263,7 @@ function add_hexmap_model_2(_this) {
                 return str;
             })
             .each(function (d) {
+                d.hex.visible = true;
                 _this.draw_topic(d3.select(this), d.data, d.hex, d.hex.topic_id)
             })
 
@@ -299,7 +300,7 @@ function add_hexmap_model_2(_this) {
         console.log("add overview")
         _this.overview = {};
         _this.overview.subtopic_level = -1;
-        _this.overview.padding = {top: 300, left: 250, bottom: 150, right: 150};
+        _this.overview.padding = {top: 100, left: 250, bottom: 150, right: 150};
         _this.overview.display = true;
 
         _this.overview.subtopics_at_level = [];
@@ -732,22 +733,20 @@ function add_hexmap_model_2(_this) {
         else {
             //console.log("multi time render", level, _this.overview.level)
             subtopic_container = _this.overview.subtopic_container;
-            //if (_this.overview.level !== level) {
-            lvl_scale = Math.pow(1 / 3, level + 1);
-            overall_scale = scale * lvl_scale;
-            // subtopic_container
-            //     .transition()
-            //     .ease(d3.easeLinear)
-            //     .delay(0)
-            //     .duration(_this.config.transition_duration * 1)
-            //     .style("transform", function () {
-            //         var str = "translate(" + ox + "px," + oy + "px) "
-            //             + "scale(" + overall_scale + "," + overall_scale + ")";
-            //         return str;
-            //     })
+            if (_this.overview.level !== level
+                && _this.zooming_states.current !== "s2a"
+                && _this.zooming_states.current !== "s1a") {
+                lvl_scale = Math.pow(1 / 3, level + 1);
+                overall_scale = scale * lvl_scale;
+                subtopic_container
+                    .style("transform", function () {
+                        var str = "translate(" + ox + "px," + oy + "px) "
+                            + "scale(" + overall_scale + "," + overall_scale + ")";
+                        return str;
+                    })
 
-            //
-            //}
+                //
+            }
         }
         _this.overview.level = level;
         var cluster_enter = subtopic_container
@@ -944,9 +943,42 @@ function add_hexmap_model_2(_this) {
 
             var padding = _this.config.hexagon_scale * shrink_scale;
 
+            var label = "Super-topic from level " + (level + 1)
+            var label_enter = _this.overview.supertopic_container
+                .selectAll("g.text-container")
+                .data([label], function (d) {
+                    return d
+                })
+                .enter()
+
+            label_enter.append("g")
+                .attr("class", "text-container")
+                .append("text")
+                .style("transform", "translate(10px, 25px)")
+                .style("font-size", "15px")
+                .html(function (d) {
+                    return d;
+                })
+
+
+
+
+
+            var label_update = _this.overview.supertopic_container
+                .selectAll("g.text-container")
+                .data([label], function (d) {
+                    return d
+                })
+            console.log(label)
+
+
+            label_update.exit()
+                .remove();
+
+
             var container = enter.append("g")
                 .attr("class", "super-topic-container")
-                .style("transform", "translate(" + padding + "px," + padding + "px)"
+                .style("transform", "translate(" + padding + "px," + (padding + 30) + "px)"
                     + " scale(" + shrink_scale + "," + shrink_scale + ")")
 
             container.each(function (d) {
@@ -1299,7 +1331,7 @@ function add_hexmap_model_2(_this) {
                 var i = hex_id;
                 var node_data = _this.topic_data[level];
                 var d = node_data.data.hexagons[i];
-                _this.show_cloud(node_data.data.topics[i]);
+                _this.show_cloud(node_data.data.topics[i], _this.get_zoom_depth() + "-" + i);
                 //console.log(node_data, _this.get_zooming_opa city(node_data))
                 _this.view.selected_hex = {
                     data: node_data,
@@ -1311,8 +1343,6 @@ function add_hexmap_model_2(_this) {
                 assign_subtopics(node_data.level);
                 _this.display_file_list(node_data, i);
 
-                zoomin();
-                zoomin();
             }
 
         }
@@ -1329,7 +1359,7 @@ function add_hexmap_model_2(_this) {
             var y = mouse[1];
 
             var rgba = ctx.getImageData(x, y, 1, 1).data;
-            console.log(JSON.stringify(rgba), rgba[3] > 0)
+            //console.log(JSON.stringify(rgba), rgba[3] > 0)
             if (rgba[3] > 0) {
                 _this.overview_mouse_on_hexagon = true;
             } else {
@@ -1353,8 +1383,9 @@ function add_hexmap_model_2(_this) {
                     closest = i;
                 }
             }
-            console.log("closest", closest)
+            //console.log("closest", closest)
             if (closest !== _this.hover_overview_hexagon_id) {
+                console.log("Hover on ", closest)
                 _this.hover_overview_hexagon_id = closest;
 
                 // all about hovered hexagon
@@ -1372,8 +1403,8 @@ function add_hexmap_model_2(_this) {
 
 
                 //console.log(sm_x, sm_y, "|", lm_x, lm_y)
-                _this.view.x = -dx / _this.view.zoom_scale;
-                _this.view.y = -dy / _this.view.zoom_scale;
+                //_this.view.x = -dx / _this.view.zoom_scale;
+                //_this.view.y = -dy / _this.view.zoom_scale;
 
                 _this.drag_graph(_this.view_wrap, true);
                 _this.render();
@@ -1596,6 +1627,10 @@ function add_hexmap_model_2(_this) {
         update_render(_this.topic_data, _this.view_wrap);
         return _this;
     }
+    //disable drag
+    _this.init_list.splice(0, 0, function disable_drag() {
+        _this.view.drag_enabled = false;
+    })
 
 
 }

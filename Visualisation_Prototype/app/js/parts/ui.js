@@ -17,7 +17,7 @@ function moushwheel_event_handler(e, callback) {
 function bind_mousewheel(dom_id, MouseWheelHandler) {
     var dom = document.getElementById(dom_id);
 
-    if (!dom.MouseWheelHandler){
+    if (!dom.MouseWheelHandler) {
 
         dom.MouseWheelHandler = function (e) {
             moushwheel_event_handler(e, MouseWheelHandler);
@@ -31,7 +31,7 @@ function bind_mousewheel(dom_id, MouseWheelHandler) {
         }
 // IE 6/7/8
         else dom.attachEvent("onmousewheel", dom.MouseWheelHandler);
-    }else{
+    } else {
         dom.MouseWheelHandler = function (e) {
             moushwheel_event_handler(e, MouseWheelHandler);
         }
@@ -78,6 +78,7 @@ function add_ui(_this) {
         zoom_power: 1,
         zoom_base: Math.sqrt(3),
         zoom_ease: d3.easeLinear,
+        drag_enabled: true,
         drag_d_pos: {
             x: 0,
             y: 0
@@ -89,6 +90,8 @@ function add_ui(_this) {
         dragging: false,
         x: 0,
         y: 0,
+
+        cloud_id: null,
         pie_selection: [
             {name: "US", value: true},
             {name: "UK", value: true},
@@ -108,11 +111,11 @@ function add_ui(_this) {
                 var key = ""
                 for (var i = 0; i < _this.view.pie_selection.length; i++) {
                     var e = ( _this.view.pie_selection[i].value ? 1 : 0);
-                    key+=e;
+                    key += e;
                 }
                 return key;
             }
-            _this.view.pie_selection_key=get_key();
+            _this.view.pie_selection_key = get_key();
             //console.log(_this.view.pie_selection)
         },
         pie_selected: function (t) {
@@ -192,7 +195,8 @@ function add_ui(_this) {
 
             _this.tab_defs = [
                 {text: "Overview", onclick: show_overview, active: true},
-                {text: "Search Words", onclick: show_search_words, active: false}
+                //disable search for experiment
+                //{text: "Search Words", onclick: show_search_words, active: false}
             ]
             _this.tab_wrapper = _this.panel_container.append("div")
                 .attr("class", "panel-tab-wrapper")
@@ -494,12 +498,13 @@ function add_ui(_this) {
         }
 
         //binding mouse events for dragging effect
-        _this.svg
-            .on("mousedown", drag_start)
-            .on("mouseup", drag_finish)
-            .on("mouseleave", drag_finish)
-            .on("mousemove",  dragging)
-
+        if (_this.view.drag_enabled) {
+            _this.svg
+                .on("mousedown", drag_start)
+                .on("mouseup", drag_finish)
+                .on("mouseleave", drag_finish)
+                .on("mousemove", dragging)
+        }
 
     }
 
@@ -779,9 +784,12 @@ function add_ui(_this) {
 		d3.layout.cloud().stop();
 	}
 	
-
-    _this.show_cloud = function (topic_words) {
-		console.log("topic_words",topic_words);
+    _this.show_cloud = function (topic_words, id) {
+        if (!_this.view.cloud_id || id !== _this.view.cloud_id) {
+            _this.view.cloud_id = id;
+        } else {
+            return;
+        }
         var max = d3.max(topic_words, weight);
         var min = d3.min(topic_words, weight);
         var ws = JSON.parse(JSON.stringify(topic_words));
@@ -911,8 +919,8 @@ function add_ui(_this) {
         var suffix = trace.join("_"); //suffix used as key to trace topic objects
         //console.log(node_data.level ,i);
         //console.log(!!_this.data_dir.length)
-        var path = typeof _this.data_dir=="object"
-            ?  _this.data_dir[node_data.level] + prefix + suffix + ".json"
+        var path = typeof _this.data_dir == "object"
+            ? _this.data_dir[node_data.level] + prefix + suffix + ".json"
             : _this.data_dir + prefix + suffix + ".json";
 
         _this.document_list_container.append("div")

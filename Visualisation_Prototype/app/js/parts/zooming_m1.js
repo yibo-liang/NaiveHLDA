@@ -5,6 +5,12 @@
 function add_zooming_m1(_this){
 
 
+    _this.add_zoom_helper=function(){
+
+
+
+    }
+
     _this.enable_zooming = function () {
         _this.mousewheel_delta=0;
         bind_mousewheel("hex_svg", function (delta) {
